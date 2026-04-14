@@ -20,6 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { LeadForm } from '@/components/lead-form'
 import { Plus, LayoutList, Kanban, Search, GripVertical } from 'lucide-react'
 import { dagenInFase } from '@/lib/format'
 import { toast } from 'sonner'
@@ -120,6 +122,7 @@ export default function CampagneLeadsPage() {
   const [eigenaarFilter, setEigenaarFilter] = useState('alle')
   const [zoek, setZoek] = useState('')
   const [activeDrag, setActiveDrag] = useState<CampagneLead | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -223,8 +226,8 @@ export default function CampagneLeadsPage() {
           </button>
         </div>
         <Button
-          onClick={() => router.push('/campagne-leads/nieuw')}
-          className="bg-[#3A6FD8] hover:bg-[#2F57AA] text-sm"
+          onClick={() => setCreateOpen(true)}
+          className="bg-gradient-to-r from-[#3A6FD8] to-[#2F57AA] hover:from-[#2F57AA] hover:to-[#254A99] shadow-md shadow-[#3A6FD8]/15 text-sm"
           size="sm"
         >
           <Plus className="w-4 h-4 mr-1" />
@@ -353,6 +356,16 @@ export default function CampagneLeadsPage() {
           </DragOverlay>
         </DndContext>
       )}
+
+      {/* Nieuwe lead popup */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nieuwe campagne lead</DialogTitle>
+          </DialogHeader>
+          <LeadForm type="campagne" onSuccess={() => { setCreateOpen(false); fetchLeads() }} />
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

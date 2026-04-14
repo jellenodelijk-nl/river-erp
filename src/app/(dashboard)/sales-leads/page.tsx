@@ -15,6 +15,8 @@ import { Badge } from '@/components/ui/badge'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { LeadForm } from '@/components/lead-form'
 import { Plus, LayoutList, Kanban, Search, GripVertical } from 'lucide-react'
 import { dagenInFase, formatValuta } from '@/lib/format'
 import { toast } from 'sonner'
@@ -72,6 +74,7 @@ export default function SalesLeadsPage() {
   const [eigenaarFilter, setEigenaarFilter] = useState('alle')
   const [zoek, setZoek] = useState('')
   const [activeDrag, setActiveDrag] = useState<SalesLead | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
@@ -136,7 +139,7 @@ export default function SalesLeadsPage() {
             <Kanban className="w-4 h-4" />
           </button>
         </div>
-        <Button onClick={() => router.push('/sales-leads/nieuw')} className="bg-[#1F8A9B] hover:bg-[#176C79] text-sm" size="sm">
+        <Button onClick={() => setCreateOpen(true)} className="bg-gradient-to-r from-[#1F8A9B] to-[#176C79] hover:from-[#176C79] hover:to-[#125B65] shadow-md shadow-[#1F8A9B]/15 text-sm" size="sm">
           <Plus className="w-4 h-4 mr-1" /> Nieuwe lead
         </Button>
       </PageHeader>
@@ -228,6 +231,16 @@ export default function SalesLeadsPage() {
           </DragOverlay>
         </DndContext>
       )}
+
+      {/* Nieuwe lead popup */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nieuwe sales lead</DialogTitle>
+          </DialogHeader>
+          <LeadForm type="sales" onSuccess={() => { setCreateOpen(false); fetchLeads() }} />
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

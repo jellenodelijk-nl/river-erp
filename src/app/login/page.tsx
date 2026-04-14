@@ -122,24 +122,45 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F4F6F7] px-4">
+    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden bg-gradient-to-br from-[#F0F4FF] via-[#F4F6F7] to-[#F0FAFB]">
+      {/* River wave background decorations */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <svg viewBox="0 0 1440 900" fill="none" className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+          <path d="M-100 300C200 200 500 400 800 300C1100 200 1300 350 1540 280" stroke="url(#loginGrad1)" strokeWidth="120" strokeLinecap="round" opacity="0.04" />
+          <path d="M-100 500C200 400 500 600 800 500C1100 400 1300 550 1540 480" stroke="url(#loginGrad2)" strokeWidth="80" strokeLinecap="round" opacity="0.03" />
+          <path d="M-100 700C200 600 500 800 800 700C1100 600 1300 750 1540 680" stroke="url(#loginGrad1)" strokeWidth="100" strokeLinecap="round" opacity="0.025" />
+          <circle cx="200" cy="150" r="200" fill="#3A6FD8" opacity="0.02" />
+          <circle cx="1200" cy="700" r="250" fill="#1F8A9B" opacity="0.02" />
+          <defs>
+            <linearGradient id="loginGrad1" x1="0" y1="0" x2="1440" y2="0">
+              <stop offset="0%" stopColor="#3A6FD8" />
+              <stop offset="100%" stopColor="#1F8A9B" />
+            </linearGradient>
+            <linearGradient id="loginGrad2" x1="0" y1="0" x2="1440" y2="0">
+              <stop offset="0%" stopColor="#1F8A9B" />
+              <stop offset="100%" stopColor="#3A6FD8" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="w-full max-w-sm"
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="w-full max-w-sm relative z-10"
       >
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="flex justify-center gap-6 items-center mb-3">
+          <div className="flex justify-center gap-5 items-center mb-4">
             <Image src="/logos/river-digital.png" alt="River Digital" width={140} height={46} className="h-10 w-auto" priority />
-            <div className="w-px h-8 bg-[#E5E7EB]" />
+            <div className="w-px h-8 bg-gradient-to-b from-transparent via-[#D1D5DB] to-transparent" />
             <Image src="/logos/river-software.png" alt="River Software" width={140} height={46} className="h-10 w-auto" priority />
           </div>
-          <p className="text-sm text-[#6B7280]">Intern management systeem</p>
+          <p className="text-sm text-[#9CA3AF] font-medium tracking-wide">Intern management systeem</p>
         </div>
 
-        <Card className="border border-[#E5E7EB] shadow-sm">
+        <Card className="border border-white/60 shadow-xl shadow-[#3A6FD8]/5 bg-white/80 backdrop-blur-sm">
           <CardHeader className="pb-4">
             <h2 className="text-lg font-semibold text-center">
               {step === 'credentials' && 'Inloggen'}
@@ -184,7 +205,7 @@ export default function LoginPage() {
                   {error && (
                     <p className="text-sm text-red-500 bg-red-50 p-2 rounded-md">{error}</p>
                   )}
-                  <Button type="submit" className="w-full bg-[#3A6FD8] hover:bg-[#2F57AA]" disabled={loading}>
+                  <Button type="submit" className="w-full bg-gradient-to-r from-[#3A6FD8] to-[#2F57AA] hover:from-[#2F57AA] hover:to-[#254A99] shadow-lg shadow-[#3A6FD8]/20 transition-all duration-200" disabled={loading}>
                     {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
                     Inloggen
                   </Button>
