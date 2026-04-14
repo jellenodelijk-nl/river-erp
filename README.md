@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# River ERP
 
-## Getting Started
+Intern CRM/ERP systeem voor **River Digital** en **River Software**.
 
-First, run the development server:
+## Tech Stack
+
+- **Framework**: Next.js 14 (App Router) + TypeScript
+- **Styling**: Tailwind CSS + shadcn/ui
+- **Database**: Supabase (PostgreSQL)
+- **Auth**: Supabase Auth + TOTP 2FA
+- **Charts**: Recharts
+- **Animaties**: Framer Motion
+- **Iconen**: Lucide React
+- **Drag & Drop**: dnd-kit
+
+## Setup
+
+### 1. Clone & installeer
+
+```bash
+git clone https://github.com/jellenodelijk-nl/river-erp.git
+cd river-erp
+npm install
+```
+
+### 2. Supabase
+
+1. Maak een nieuw Supabase project aan
+2. Voer de SQL migration uit: `supabase/migrations/001_initial_schema.sql`
+3. Kopieer de project URL en keys
+
+### 3. Environment variables
+
+```bash
+cp .env.example .env.local
+```
+
+Vul de waarden in:
+- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon key
+- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key
+- `MONEYBIRD_API_TOKEN` — Moneybird API token
+- `MONEYBIRD_ADMINISTRATION_ID` — Moneybird administratie ID
+
+### 4. Eerste admin gebruiker
+
+Maak handmatig een gebruiker aan in Supabase Auth, en voeg een record toe in de `users` tabel met `role = 'admin'`.
+
+### 5. Start development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Modules
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Module | Route | Beschrijving |
+|--------|-------|-------------|
+| Dashboard | `/` | Overzicht metrics, recente leads, taken |
+| Campagne leads | `/campagne-leads` | Kanban + lijst, drag-and-drop fases |
+| Sales leads | `/sales-leads` | Kanban + lijst, omzetten naar klant |
+| Klanten | `/klanten` | Klantenbeheer, opdrachten, Moneybird facturen |
+| Taken | `/taken` | Taakbeheer met filters en inline status |
+| Financiën | `/financien` | Moneybird facturatieoverzicht |
+| Analyse | `/analyse` | Grafieken en statistieken (Recharts) |
+| Gebruikers | `/gebruikers` | Admin: gebruikersbeheer + uitnodigen |
+| Instellingen | `/instellingen` | Profielinstellingen |
 
-## Learn More
+## Deployment (Vercel)
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Push naar GitHub
+2. Importeer in Vercel
+3. Voeg environment variables toe
+4. Deploy
