@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -130,11 +131,10 @@ export default function LoginPage() {
       >
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-[#3A6FD8] flex items-center justify-center">
-              <span className="text-white font-semibold text-lg">R</span>
-            </div>
-            <span className="text-2xl font-semibold text-[#0B0D0E]">River ERP</span>
+          <div className="flex justify-center gap-6 items-center mb-3">
+            <Image src="/logos/river-digital.png" alt="River Digital" width={140} height={46} className="h-10 w-auto" priority />
+            <div className="w-px h-8 bg-[#E5E7EB]" />
+            <Image src="/logos/river-software.png" alt="River Software" width={140} height={46} className="h-10 w-auto" priority />
           </div>
           <p className="text-sm text-[#6B7280]">Intern management systeem</p>
         </div>

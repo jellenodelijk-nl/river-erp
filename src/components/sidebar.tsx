@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -71,13 +72,11 @@ export function Sidebar() {
   const NavContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="px-4 py-5 border-b border-[#E5E7EB]">
-        <Link href="/" className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
-          <div className="w-8 h-8 rounded-lg bg-[#3A6FD8] flex items-center justify-center">
-            <span className="text-white font-semibold text-sm">R</span>
-          </div>
-          <span className="text-lg font-semibold text-[#0B0D0E]">River ERP</span>
+      <div className="px-4 py-4 border-b border-[#E5E7EB]">
+        <Link href="/" className="flex items-center gap-2.5" onClick={() => setMobileOpen(false)}>
+          <Image src="/logos/river-digital.png" alt="River Digital" width={120} height={40} className="h-8 w-auto" priority />
         </Link>
+        <p className="text-[10px] text-[#9CA3AF] mt-1 pl-0.5">ERP Systeem</p>
       </div>
 
       {/* Navigation */}
@@ -145,12 +144,9 @@ export function Sidebar() {
     <>
       {/* Mobile hamburger */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-[#E5E7EB] px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-md bg-[#3A6FD8] flex items-center justify-center">
-            <span className="text-white font-semibold text-xs">R</span>
-          </div>
-          <span className="text-base font-semibold text-[#0B0D0E]">River ERP</span>
-        </div>
+        <Link href="/" className="flex items-center">
+          <Image src="/logos/river-digital.png" alt="River Digital" width={100} height={32} className="h-7 w-auto" priority />
+        </Link>
         <Button
           variant="ghost"
           size="icon"
