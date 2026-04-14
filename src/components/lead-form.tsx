@@ -201,7 +201,9 @@ export function LeadForm({ type, initialData, leadId, onSuccess, inline }: LeadF
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-[#6B7280]">Eigenaar</Label>
           <Select value={form.eigenaar_id} onValueChange={(v) => updateField('eigenaar_id', v ?? '')}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={eigenaarNaam || 'Selecteer...'} /></SelectTrigger>
+            <SelectTrigger className="h-9 text-sm">
+              {eigenaarNaam || <span className="text-[#9CA3AF]">Selecteer...</span>}
+            </SelectTrigger>
             <SelectContent>
               {users.map((u) => (
                 <SelectItem key={u.id} value={u.id}>{u.full_name || u.email}</SelectItem>
