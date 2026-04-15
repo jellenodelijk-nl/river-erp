@@ -20,48 +20,90 @@ export async function GET(request: Request) {
 
   try {
     const allInvoices: Record<string, unknown>[] = []
-    let page = 1
 
-    while (true) {
-      let url = `${MONEYBIRD_API}/${adminId}/sales_invoices.json?per_page=100&page=${page}`
-      if (contactId) {
-        url += `&filter=contact_id:${contactId}`
+    if (contactId) {
+      // For a specific contact, use filter
+      let page = 1
+      while (true) {
+        const url = `${MONEYBIRD_API}/${adminId}/sales_invoices.json?per_page=100&page=${page}&filter=contact_id:${contactId}`
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        })
+        if (!res.ok) break
+        const data = await res.json()
+        if (!Array.isArray(data) || data.length === 0) break
+        allInvoices.push(...data)
+        page++
+        if (page > 20) break
       }
+    } else {
+      // For all invoices: use synchronization endpoint to get ALL invoice IDs first
+      // Then fetch in batches. The sync endpoint returns all IDs across all years.
+      try {
+        const syncRes = await fetch(
+          `${MONEYBIRD_API}/${adminId}/sales_invoices/synchronization.json`,
+          { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+        )
+        if (syncRes.ok) {
+          const syncData: { id: string }[] = await syncRes.json()
+          const allIds = syncData.map(s => s.id)
 
-      const res = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (!res.ok) {
-        if (page === 1) return NextResponse.json({ error: `Moneybird API fout: ${res.status}` }, { status: res.status })
-        break
+          // Fetch in batches of 100 IDs using the batch endpoint
+          for (let i = 0; i < allIds.length; i += 100) {
+            const batchIds = allIds.slice(i, i + 100)
+            const batchRes = await fetch(
+              `${MONEYBIRD_API}/${adminId}/sales_invoices/synchronization.json`,
+              {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: batchIds }),
+              }
+            )
+            if (batchRes.ok) {
+              const batchData = await batchRes.json()
+              if (Array.isArray(batchData)) allInvoices.push(...batchData)
+            }
+          }
+        }
+      } catch {
+        // Fallback: paginate through regular endpoint with period filter going back to 2015
+        for (let year = new Date().getFullYear(); year >= 2015; year--) {
+          let page = 1
+          while (true) {
+            const url = `${MONEYBIRD_API}/${adminId}/sales_invoices.json?per_page=100&page=${page}&filter=period:${year}0101..${year}1231`
+            const res = await fetch(url, {
+              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            })
+            if (!res.ok) break
+            const data = await res.json()
+            if (!Array.isArray(data) || data.length === 0) break
+            allInvoices.push(...data)
+            page++
+            if (page > 10) break
+          }
+        }
       }
-
-      const invoices = await res.json()
-      if (!Array.isArray(invoices) || invoices.length === 0) break
-
-      allInvoices.push(...invoices)
-      page++
-
-      // Safety limit
-      if (page > 30) break
     }
 
-    // Map Moneybird states to our statuses
-    // Moneybird states: draft, open, scheduled, pending_payment, late, reminded, paid, uncollectible
+    // Deduplicate by id
+    const seen = new Set<string>()
+    const unique = allInvoices.filter(inv => {
+      const id = String(inv.id)
+      if (seen.has(id)) return false
+      seen.add(id)
+      return true
+    })
+
     function mapStatus(state: string, dueDate: string | null): string {
       if (state === 'paid') return 'paid'
-      if (state === 'uncollectible') return 'paid' // treat as closed
+      if (state === 'uncollectible') return 'paid'
       if (state === 'late' || state === 'reminded') return 'late'
-      // Check if overdue based on due date
-      if (dueDate && new Date(dueDate) < new Date() && state !== 'paid') return 'late'
+      if (dueDate && new Date(dueDate) < new Date() && state !== 'paid' && state !== 'draft') return 'late'
+      if (state === 'draft') return 'draft'
       return 'open'
     }
 
-    const facturen = allInvoices.map((inv) => ({
+    const facturen = unique.map((inv) => ({
       id: inv.id,
       invoice_id: inv.invoice_id,
       factuurnummer: inv.invoice_id || inv.reference,
@@ -74,11 +116,12 @@ export async function GET(request: Request) {
       moneybird_status: inv.state,
       betaald_op: inv.paid_at || null,
       contact_id: inv.contact_id,
-      contact_naam: (inv.contact as Record<string, unknown>)?.company_name ||
-                     [(inv.contact as Record<string, unknown>)?.firstname, (inv.contact as Record<string, unknown>)?.lastname].filter(Boolean).join(' ') || null,
+      contact_naam: typeof inv.contact === 'object' && inv.contact !== null
+        ? ((inv.contact as Record<string, unknown>).company_name ||
+           [(inv.contact as Record<string, unknown>).firstname, (inv.contact as Record<string, unknown>).lastname].filter(Boolean).join(' '))
+        : null,
     }))
 
-    // Sort by date descending
     facturen.sort((a, b) => String(b.datum || '').localeCompare(String(a.datum || '')))
 
     return NextResponse.json(facturen)
