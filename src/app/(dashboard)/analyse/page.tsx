@@ -158,18 +158,35 @@ export default function AnalysePage() {
     return Object.entries(map).sort(([a], [b]) => a.localeCompare(b)).map(([jaar, omzet]) => ({ jaar, omzet }))
   }, [betaaldeFacturen])
 
-  // Omzet per maand (12m)
-  const omzetPerMaand = useMemo(() => {
-    const map: Record<string, number> = {}
+  // Omzet per maand YTD vergelijking per jaar
+  const maandLabels = ['Jan', 'Feb', 'Mrt', 'Apr', 'Mei', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec']
+  const omzetYTD = useMemo(() => {
+    // Group by year and month
+    const perJaarMaand: Record<string, Record<number, number>> = {}
     betaaldeFacturen.forEach(f => {
       if (!f.datum) return
-      const d = parseISO(f.datum)
-      if (d > subMonths(new Date(), 12)) {
-        const label = format(d, 'MMM yy', { locale: nl })
-        map[label] = (map[label] || 0) + f.totaal
-      }
+      const jaar = f.datum.slice(0, 4)
+      const maand = parseInt(f.datum.slice(5, 7)) - 1 // 0-indexed
+      if (!perJaarMaand[jaar]) perJaarMaand[jaar] = {}
+      perJaarMaand[jaar][maand] = (perJaarMaand[jaar][maand] || 0) + f.totaal
     })
-    return Object.entries(map).map(([maand, omzet]) => ({ maand, omzet }))
+
+    const jaren = Object.keys(perJaarMaand).sort().reverse().slice(0, 4) // Max 4 jaren
+    const huidigeMaand = new Date().getMonth()
+
+    // Build chart data: one row per month, one key per year
+    const data = maandLabels.map((label, i) => {
+      const row: Record<string, string | number> = { maand: label }
+      jaren.forEach(jaar => {
+        // For current year, only show up to current month
+        const isHuidigJaar = jaar === String(new Date().getFullYear())
+        if (isHuidigJaar && i > huidigeMaand) return
+        row[jaar] = perJaarMaand[jaar]?.[i] || 0
+      })
+      return row
+    })
+
+    return { data, jaren }
   }, [betaaldeFacturen])
 
   // Nieuwe klanten per maand (based on earliest factuur)
@@ -294,15 +311,28 @@ export default function AnalysePage() {
               )}
             </ChartCard>
 
-            {/* Omzet per maand */}
-            <ChartCard title="Omzet per maand (12m)" icon={TrendingUp} delay={0.1}>
-              {omzetPerMaand.length === 0 ? <p className="text-xs text-muted-foreground py-10 text-center">Geen data</p> : (
+            {/* Omzet per maand YTD vergelijking */}
+            <ChartCard title="Omzet per maand — YTD vergelijking" icon={TrendingUp} delay={0.1}>
+              {omzetYTD.jaren.length === 0 ? <p className="text-xs text-muted-foreground py-10 text-center">Geen data</p> : (
                 <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={omzetPerMaand}>
+                  <LineChart data={omzetYTD.data}>
                     <XAxis dataKey="maand" tick={{ fontSize: 9 }} />
                     <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `€${(v/1000).toFixed(0)}k`} />
                     <Tooltip formatter={(v) => formatValuta(Number(v))} />
-                    <Line type="monotone" dataKey="omzet" stroke="#1F8A9B" strokeWidth={2} dot={{ r: 3 }} name="Omzet" />
+                    <Legend />
+                    {omzetYTD.jaren.map((jaar, i) => (
+                      <Line
+                        key={jaar}
+                        type="monotone"
+                        dataKey={jaar}
+                        name={jaar}
+                        stroke={['#3A6FD8', '#1F8A9B', '#7FA6FF', '#5FBBC7'][i]}
+                        strokeWidth={i === 0 ? 2.5 : 1.5}
+                        strokeDasharray={i === 0 ? undefined : '5 3'}
+                        dot={i === 0 ? { r: 3 } : false}
+                        opacity={i === 0 ? 1 : 0.6}
+                      />
+                    ))}
                   </LineChart>
                 </ResponsiveContainer>
               )}
