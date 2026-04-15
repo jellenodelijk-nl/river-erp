@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { PageHeader } from '@/components/page-header'
 import { BedrijfFilter } from '@/components/bedrijf-filter'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -22,7 +23,7 @@ import { motion } from 'framer-motion'
 import { formatDatum, formatValuta } from '@/lib/format'
 import { subMonths, format, parseISO } from 'date-fns'
 import { nl } from 'date-fns/locale'
-import { Users, TrendingUp, Megaphone, Receipt, Building2, Search, ArrowUpDown } from 'lucide-react'
+import { Users, TrendingUp, Megaphone, Receipt, Building2, Search, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 
 const COLORS = ['#3A6FD8', '#1F8A9B', '#7FA6FF', '#5FBBC7', '#C9D9FF', '#A9DDE4']
@@ -58,8 +59,11 @@ export default function AnalysePage() {
 
   // Klanten tabel
   const [klantZoek, setKlantZoek] = useState('')
-  const [sortField, setSortField] = useState<'naam' | 'totale_omzet' | 'aantal_facturen' | 'klant_sinds'>('totale_omzet')
+  const [sortField, setSortField] = useState<string>('totale_omzet')
   const [sortAsc, setSortAsc] = useState(false)
+  const [jaarOffset, setJaarOffset] = useState(0) // 0 = meest recent
+  const [tabelPagina, setTabelPagina] = useState(0)
+  const PAGINA_SIZE = 25
 
   // Load all data in parallel
   useEffect(() => {
@@ -134,7 +138,10 @@ export default function AnalysePage() {
       let av: string | number, bv: string | number
       if (sortField === 'naam') { av = a.naam.toLowerCase(); bv = b.naam.toLowerCase() }
       else if (sortField === 'klant_sinds') { av = a.klant_sinds || 'zzz'; bv = b.klant_sinds || 'zzz' }
-      else { av = a[sortField]; bv = b[sortField] }
+      else if (sortField.match(/^\d{4}$/)) { av = a.omzet_per_jaar[sortField] || 0; bv = b.omzet_per_jaar[sortField] || 0 }
+      else if (sortField === 'totale_omzet') { av = a.totale_omzet; bv = b.totale_omzet }
+      else if (sortField === 'aantal_facturen') { av = a.aantal_facturen; bv = b.aantal_facturen }
+      else { av = 0; bv = 0 }
       if (av < bv) return sortAsc ? -1 : 1
       if (av > bv) return sortAsc ? 1 : -1
       return 0
@@ -233,12 +240,13 @@ export default function AnalysePage() {
     setDetailOpen(true)
   }
 
-  function handleSort(field: typeof sortField) {
+  function handleSort(field: string) {
     if (sortField === field) setSortAsc(!sortAsc)
     else { setSortField(field); setSortAsc(false) }
+    setTabelPagina(0)
   }
 
-  function SortHeader({ field, children }: { field: typeof sortField; children: React.ReactNode }) {
+  function SortHeader({ field, children }: { field: string; children: React.ReactNode }) {
     return (
       <button onClick={() => handleSort(field)} className="flex items-center gap-1 hover:text-foreground transition-colors">
         {children}
@@ -358,26 +366,6 @@ export default function AnalysePage() {
               <p className="text-[10px] text-muted-foreground/50 mt-1 text-center">Klik op een balk om klanten te zien</p>
             </ChartCard>
 
-            {/* Klanten per locatie — klikbaar */}
-            <ChartCard title="Klanten per locatie (top 10)" icon={Users} delay={0.2}>
-              {klantenPerLocatie.chart.length === 0 ? <p className="text-xs text-muted-foreground py-10 text-center">Geen data</p> : (
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={klantenPerLocatie.chart} layout="vertical" onClick={(e) => {
-                    if (e?.activeLabel) {
-                      const items = klantenPerLocatie.detail[e.activeLabel] || []
-                      showDetail(`Klanten in ${e.activeLabel}`, items.map(k => ({ id: k.id, naam: k.naam, extra: k.bedrijf })))
-                    }
-                  }} style={{ cursor: 'pointer' }}>
-                    <XAxis type="number" />
-                    <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 10 }} />
-                    <Tooltip />
-                    <Bar dataKey="value" fill="#1F8A9B" radius={[0, 4, 4, 0]} name="Klanten" />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-              <p className="text-[10px] text-muted-foreground/50 mt-1 text-center">Klik op een balk om klanten te zien</p>
-            </ChartCard>
-
             {/* Campagne & Sales */}
             <ChartCard title="Campagne leads per fase" icon={Megaphone} delay={0.25}>
               {campagneFaseData.length === 0 ? <p className="text-xs text-muted-foreground py-10 text-center">Geen data</p> : (
@@ -405,63 +393,114 @@ export default function AnalysePage() {
           </div>
 
           {/* Klanten analyse tabel */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-            <Card className="card-base overflow-hidden">
-              <CardHeader className="pb-3 border-b border-border/50 bg-muted/20 flex flex-row items-center justify-between">
-                <CardTitle className="section-header flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-primary" /> Klanten analyse
-                  <Badge className="bg-primary/10 text-primary text-[10px] ml-1">{filteredKlanten.length}</Badge>
-                </CardTitle>
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50" />
-                  <Input value={klantZoek} onChange={e => setKlantZoek(e.target.value)} placeholder="Zoek klant..." className="pl-8 h-8 text-xs w-[180px]" />
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/10">
-                        <TableHead className="text-[11px] font-semibold"><SortHeader field="naam">Klant</SortHeader></TableHead>
-                        <TableHead className="text-[11px] font-semibold"><SortHeader field="klant_sinds">Klant sinds</SortHeader></TableHead>
-                        <TableHead className="text-[11px] font-semibold text-right"><SortHeader field="totale_omzet">Totale omzet</SortHeader></TableHead>
-                        <TableHead className="text-[11px] font-semibold text-right"><SortHeader field="aantal_facturen">Facturen</SortHeader></TableHead>
-                        {alleJaren.slice(0, 4).map(j => (
-                          <TableHead key={j} className="text-[11px] font-semibold text-right hidden lg:table-cell">{j}</TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredKlanten.slice(0, 50).map(k => (
-                        <TableRow key={k.id} className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => router.push(`/klanten/${k.id}`)}>
-                          <TableCell>
-                            <div>
-                              <p className="text-sm font-medium text-foreground">{k.naam}</p>
-                              {k.bedrijf && k.bedrijf !== k.naam && <p className="text-[11px] text-muted-foreground">{k.bedrijf}</p>}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{k.klant_sinds ? formatDatum(k.klant_sinds) : '-'}</TableCell>
-                          <TableCell className="text-sm font-semibold text-right">{k.totale_omzet > 0 ? formatValuta(k.totale_omzet) : '-'}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground text-right">{k.aantal_facturen || '-'}</TableCell>
-                          {alleJaren.slice(0, 4).map(j => (
-                            <TableCell key={j} className="text-xs text-right hidden lg:table-cell">
-                              {k.omzet_per_jaar[j] ? formatValuta(k.omzet_per_jaar[j]) : <span className="text-muted-foreground/30">-</span>}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                      {filteredKlanten.length === 0 && (
-                        <TableRow><TableCell colSpan={4 + alleJaren.slice(0, 4).length} className="text-center text-sm text-muted-foreground py-8">Geen klanten gevonden</TableCell></TableRow>
+          {(() => {
+            const zichtbareJaren = alleJaren.slice(jaarOffset, jaarOffset + 4)
+            const kanLinks = jaarOffset + 4 < alleJaren.length
+            const kanRechts = jaarOffset > 0
+            const totalPages = Math.ceil(filteredKlanten.length / PAGINA_SIZE)
+            const paginatedKlanten = filteredKlanten.slice(tabelPagina * PAGINA_SIZE, (tabelPagina + 1) * PAGINA_SIZE)
+
+            return (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+                <Card className="card-base overflow-hidden">
+                  <CardHeader className="pb-3 border-b border-border/50 bg-muted/20 flex flex-row items-center justify-between gap-3 flex-wrap">
+                    <CardTitle className="section-header flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-primary" /> Klanten analyse
+                      <Badge className="bg-primary/10 text-primary text-[10px] ml-1">{filteredKlanten.length}</Badge>
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      {/* Jaar navigatie */}
+                      {alleJaren.length > 4 && (
+                        <div className="flex items-center gap-1 border border-border rounded-lg px-1">
+                          <button onClick={() => { setJaarOffset(o => Math.min(o + 1, alleJaren.length - 4)) }} disabled={!kanLinks}
+                            className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed">
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="text-[10px] text-muted-foreground px-1">{zichtbareJaren[zichtbareJaren.length-1]}–{zichtbareJaren[0]}</span>
+                          <button onClick={() => { setJaarOffset(o => Math.max(o - 1, 0)) }} disabled={!kanRechts}
+                            className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed">
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       )}
-                    </TableBody>
-                  </Table>
-                </div>
-                {filteredKlanten.length > 50 && (
-                  <p className="text-[11px] text-muted-foreground/50 text-center py-2 border-t border-border/50">Eerste 50 van {filteredKlanten.length} getoond</p>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
+                      <div className="relative">
+                        <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50" />
+                        <Input value={klantZoek} onChange={e => { setKlantZoek(e.target.value); setTabelPagina(0) }} placeholder="Zoek klant..." className="pl-8 h-8 text-xs w-[160px]" />
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/10">
+                            <TableHead className="text-[11px] font-semibold"><SortHeader field="naam">Klant</SortHeader></TableHead>
+                            <TableHead className="text-[11px] font-semibold"><SortHeader field="klant_sinds">Klant sinds</SortHeader></TableHead>
+                            <TableHead className="text-[11px] font-semibold text-right"><SortHeader field="totale_omzet">Totale omzet</SortHeader></TableHead>
+                            <TableHead className="text-[11px] font-semibold text-right"><SortHeader field="aantal_facturen">Facturen</SortHeader></TableHead>
+                            {zichtbareJaren.map(j => (
+                              <TableHead key={j} className="text-[11px] font-semibold text-right hidden lg:table-cell">
+                                <SortHeader field={j}>{j}</SortHeader>
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paginatedKlanten.map(k => (
+                            <TableRow key={k.id} className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => router.push(`/klanten/${k.id}`)}>
+                              <TableCell>
+                                <div>
+                                  <p className="text-sm font-medium text-foreground">{k.naam}</p>
+                                  {k.bedrijf && k.bedrijf !== k.naam && <p className="text-[11px] text-muted-foreground">{k.bedrijf}</p>}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground">{k.klant_sinds ? formatDatum(k.klant_sinds) : '-'}</TableCell>
+                              <TableCell className="text-sm font-semibold text-right">{k.totale_omzet > 0 ? formatValuta(k.totale_omzet) : '-'}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground text-right">{k.aantal_facturen || '-'}</TableCell>
+                              {zichtbareJaren.map(j => (
+                                <TableCell key={j} className="text-xs text-right hidden lg:table-cell">
+                                  {k.omzet_per_jaar[j] ? formatValuta(k.omzet_per_jaar[j]) : <span className="text-muted-foreground/30">-</span>}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                          {filteredKlanten.length === 0 && (
+                            <TableRow><TableCell colSpan={4 + zichtbareJaren.length} className="text-center text-sm text-muted-foreground py-8">Geen klanten gevonden</TableCell></TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {/* Paginatie */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between px-4 py-2.5 border-t border-border/50 bg-muted/10">
+                        <p className="text-[11px] text-muted-foreground">
+                          {tabelPagina * PAGINA_SIZE + 1}–{Math.min((tabelPagina + 1) * PAGINA_SIZE, filteredKlanten.length)} van {filteredKlanten.length}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <Button variant="outline" size="sm" className="h-7 text-xs px-2" disabled={tabelPagina === 0} onClick={() => setTabelPagina(p => p - 1)}>
+                            Vorige
+                          </Button>
+                          {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                            const pageNum = totalPages <= 5 ? i : Math.max(0, Math.min(tabelPagina - 2, totalPages - 5)) + i
+                            return (
+                              <Button key={pageNum} variant={pageNum === tabelPagina ? 'default' : 'outline'} size="sm"
+                                className={`h-7 w-7 text-xs p-0 ${pageNum === tabelPagina ? 'bg-primary text-white' : ''}`}
+                                onClick={() => setTabelPagina(pageNum)}>
+                                {pageNum + 1}
+                              </Button>
+                            )
+                          })}
+                          <Button variant="outline" size="sm" className="h-7 text-xs px-2" disabled={tabelPagina >= totalPages - 1} onClick={() => setTabelPagina(p => p + 1)}>
+                            Volgende
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )
+          })()}
         </>
       )}
 
