@@ -51,7 +51,6 @@ export default function ProjectenPage() {
   const [status, setStatus] = useState<ProjectStatus>('gepland')
   const [klantId, setKlantId] = useState('')
   const [klantZoek, setKlantZoek] = useState('')
-  const [budget, setBudget] = useState('')
   const [startDatum, setStartDatum] = useState('')
   const [eindDatum, setEindDatum] = useState('')
   const [eigenaarId, setEigenaarId] = useState('')
@@ -90,7 +89,6 @@ export default function ProjectenPage() {
     const { error } = await supabase.from('projecten').insert({
       titel, omschrijving: omschrijving || null, status,
       klant_id: klantId || null, eigenaar_id: eigenaarId || null,
-      budget: budget ? parseFloat(budget) : null,
       start_datum: startDatum || null, eind_datum: eindDatum || null,
       bedrijf_tag: tag,
     })
@@ -98,7 +96,7 @@ export default function ProjectenPage() {
     else {
       toast.success('Project aangemaakt')
       setCreateOpen(false)
-      setTitel(''); setOmschrijving(''); setKlantId(''); setBudget(''); setStartDatum(''); setEindDatum(''); setKlantZoek('')
+      setTitel(''); setOmschrijving(''); setKlantId(''); setStartDatum(''); setEindDatum(''); setKlantZoek('')
       fetchData()
     }
     setSaving(false)
@@ -157,9 +155,6 @@ export default function ProjectenPage() {
                   </div>
                   {p.omschrijving && <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{p.omschrijving}</p>}
                   <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                    {p.budget && (
-                      <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" />{formatValuta(p.budget)}</span>
-                    )}
                     {p.start_datum && (
                       <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDatum(p.start_datum)}</span>
                     )}
@@ -217,10 +212,6 @@ export default function ProjectenPage() {
                   <SelectTrigger className="h-9 text-sm">{PROJECT_STATUSSEN.find(s => s.value === status)?.label}</SelectTrigger>
                   <SelectContent>{PROJECT_STATUSSEN.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">Budget (€)</Label>
-                <Input type="number" step="0.01" value={budget} onChange={e => setBudget(e.target.value)} className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">Startdatum</Label>

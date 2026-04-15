@@ -201,6 +201,7 @@ export interface MoneybirdFactuur {
 export interface Project {
   id: string
   klant_id: string | null
+  parent_id: string | null
   titel: string
   omschrijving: string | null
   status: ProjectStatus
