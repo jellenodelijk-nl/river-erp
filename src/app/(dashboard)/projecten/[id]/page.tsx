@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import {
-  ArrowLeft, FolderKanban, Calendar, User2, Plus, Loader2,
+  ArrowLeft, FolderKanban, Calendar, User2, Plus, Loader2, Trash2,
   CheckCircle, Circle, Clock, ChevronDown, ChevronRight, Search,
 } from 'lucide-react'
 import { formatDatum } from '@/lib/format'
@@ -194,6 +194,17 @@ export default function ProjectDetailPage() {
       toegewezen_aan: taak.toegewezen_aan || '',
     })
     setTaakEditOpen(true)
+  }
+
+  async function handleTaakDelete() {
+    if (!editTaak.id) return
+    const { error } = await supabase.from('taken').delete().eq('id', editTaak.id)
+    if (error) toast.error('Verwijderen mislukt')
+    else {
+      toast.success('Taak verwijderd'); setTaakEditOpen(false)
+      const { data } = await supabase.from('taken').select('*, toegewezen_gebruiker:users!taken_toegewezen_aan_fkey(*)').eq('gerelateerd_type', 'project').eq('gerelateerd_id', id).order('created_at', { ascending: true })
+      setTaken(data || [])
+    }
   }
 
   async function handleTaakEditSave(e: React.FormEvent) {
@@ -498,12 +509,18 @@ export default function ProjectDetailPage() {
                 <SelectContent>{users.map(u => <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setTaakEditOpen(false)}>Annuleren</Button>
-              <Button type="submit" className="bg-gradient-to-r from-[#3A6FD8] to-[#2F57AA] shadow-md shadow-[#3A6FD8]/15" disabled={saving}>
-                {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Opslaan
+            <div className="flex items-center justify-between pt-2">
+              <Button type="button" variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10 text-xs"
+                onClick={handleTaakDelete}>
+                <Trash2 className="w-3.5 h-3.5 mr-1" /> Verwijderen
               </Button>
-            </DialogFooter>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={() => setTaakEditOpen(false)}>Annuleren</Button>
+                <Button type="submit" className="bg-gradient-to-r from-[#3A6FD8] to-[#2F57AA] shadow-md shadow-[#3A6FD8]/15" disabled={saving}>
+                  {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Opslaan
+                </Button>
+              </div>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
