@@ -30,7 +30,11 @@ export type OpdrachtStatus = 'actief' | 'afgerond' | 'geannuleerd'
 export type ContactType = 'campagne_lead' | 'sales_lead' | 'klant'
 export type ContactMethode = 'bellen' | 'email' | 'meeting' | 'linkedin' | 'overig'
 
-export type TaakGerelateerd = 'campagne_lead' | 'sales_lead' | 'klant' | 'geen'
+export type TaakGerelateerd = 'campagne_lead' | 'sales_lead' | 'klant' | 'project' | 'ops_item' | 'geen'
+
+export type ProjectStatus = 'gepland' | 'actief' | 'on_hold' | 'afgerond' | 'geannuleerd'
+export type OpsStatus = 'open' | 'in_progress' | 'wacht_op_klant' | 'afgerond'
+export type OpsPrioriteit = 'laag' | 'normaal' | 'hoog' | 'urgent'
 export type TaakStatus = 'open' | 'in_progress' | 'afgerond'
 export type TaakPrioriteit = 'laag' | 'normaal' | 'hoog'
 
@@ -194,7 +198,64 @@ export interface MoneybirdFactuur {
   contact_naam?: string | null
 }
 
+export interface Project {
+  id: string
+  klant_id: string | null
+  titel: string
+  omschrijving: string | null
+  status: ProjectStatus
+  eigenaar_id: string | null
+  start_datum: string | null
+  eind_datum: string | null
+  budget: number | null
+  bedrijf_tag: BedrijfTag
+  created_at: string
+  updated_at: string
+  klant?: Klant
+  eigenaar?: User
+}
+
+export interface OpsItem {
+  id: string
+  klant_id: string | null
+  project_id: string | null
+  titel: string
+  omschrijving: string | null
+  status: OpsStatus
+  prioriteit: OpsPrioriteit
+  eigenaar_id: string | null
+  deadline: string | null
+  bedrijf_tag: BedrijfTag
+  created_at: string
+  updated_at: string
+  klant?: Klant
+  project?: Project
+  eigenaar?: User
+}
+
 // --- UI helpers ---
+
+export const PROJECT_STATUSSEN: { value: ProjectStatus; label: string }[] = [
+  { value: 'gepland', label: 'Gepland' },
+  { value: 'actief', label: 'Actief' },
+  { value: 'on_hold', label: 'On hold' },
+  { value: 'afgerond', label: 'Afgerond' },
+  { value: 'geannuleerd', label: 'Geannuleerd' },
+]
+
+export const OPS_STATUSSEN: { value: OpsStatus; label: string }[] = [
+  { value: 'open', label: 'Open' },
+  { value: 'in_progress', label: 'In progress' },
+  { value: 'wacht_op_klant', label: 'Wacht op klant' },
+  { value: 'afgerond', label: 'Afgerond' },
+]
+
+export const OPS_PRIORITEITEN: { value: OpsPrioriteit; label: string }[] = [
+  { value: 'laag', label: 'Laag' },
+  { value: 'normaal', label: 'Normaal' },
+  { value: 'hoog', label: 'Hoog' },
+  { value: 'urgent', label: 'Urgent' },
+]
 
 export const CAMPAGNE_FASES: { value: CampagneFase; label: string }[] = [
   { value: 'te_valideren', label: 'Te valideren' },

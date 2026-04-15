@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/use-auth'
 import {
   LayoutDashboard, Megaphone, TrendingUp, Users, CheckSquare,
   Receipt, BarChart3, UserCog, Settings, LogOut, Menu, X,
+  FolderKanban, Wrench,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
@@ -21,6 +22,8 @@ const navItems = [
   { href: '/campagne-leads', label: 'Campagne leads', icon: Megaphone },
   { href: '/sales-leads', label: 'Sales leads', icon: TrendingUp },
   { href: '/klanten', label: 'Klanten', icon: Users },
+  { href: '/projecten', label: 'Projecten', icon: FolderKanban },
+  { href: '/ops', label: 'Ops', icon: Wrench },
   { href: '/taken', label: 'Taken', icon: CheckSquare },
   { href: '/financien', label: 'Financiën', icon: Receipt },
   { href: '/analyse', label: 'Analyse', icon: BarChart3 },

@@ -3,6 +3,11 @@ import { createClient } from '@/lib/supabase/server'
 
 const MONEYBIRD_API = 'https://moneybird.com/api/v2'
 
+// In-memory cache (persists between requests on same serverless instance)
+let cachedFacturen: unknown[] | null = null
+let cacheTimestamp = 0
+const CACHE_TTL = 10 * 60 * 1000 // 10 minutes
+
 export async function GET(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -13,119 +18,112 @@ export async function GET(request: Request) {
 
   const token = process.env.MONEYBIRD_API_TOKEN
   const adminId = process.env.MONEYBIRD_ADMINISTRATION_ID
-
-  if (!token || !adminId) {
-    return NextResponse.json({ error: 'Moneybird niet geconfigureerd' }, { status: 500 })
-  }
+  if (!token || !adminId) return NextResponse.json({ error: 'Moneybird niet geconfigureerd' }, { status: 500 })
 
   try {
-    const allInvoices: Record<string, unknown>[] = []
+    let allInvoices: Record<string, unknown>[]
 
     if (contactId) {
-      // For a specific contact, use filter
-      let page = 1
-      while (true) {
-        const url = `${MONEYBIRD_API}/${adminId}/sales_invoices.json?per_page=100&page=${page}&filter=contact_id:${contactId}`
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        })
-        if (!res.ok) break
-        const data = await res.json()
-        if (!Array.isArray(data) || data.length === 0) break
-        allInvoices.push(...data)
-        page++
-        if (page > 20) break
-      }
+      // For specific contact: always fetch fresh (small dataset)
+      allInvoices = await fetchPaginated(`${MONEYBIRD_API}/${adminId}/sales_invoices.json?filter=contact_id:${contactId}`, token)
     } else {
-      // For all invoices: use synchronization endpoint to get ALL invoice IDs first
-      // Then fetch in batches. The sync endpoint returns all IDs across all years.
-      try {
-        const syncRes = await fetch(
-          `${MONEYBIRD_API}/${adminId}/sales_invoices/synchronization.json`,
-          { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
-        )
-        if (syncRes.ok) {
-          const syncData: { id: string }[] = await syncRes.json()
-          const allIds = syncData.map(s => s.id)
-
-          // Fetch in batches of 100 IDs using the batch endpoint
-          for (let i = 0; i < allIds.length; i += 100) {
-            const batchIds = allIds.slice(i, i + 100)
-            const batchRes = await fetch(
-              `${MONEYBIRD_API}/${adminId}/sales_invoices/synchronization.json`,
-              {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ids: batchIds }),
-              }
-            )
-            if (batchRes.ok) {
-              const batchData = await batchRes.json()
-              if (Array.isArray(batchData)) allInvoices.push(...batchData)
-            }
-          }
-        }
-      } catch {
-        // Fallback: paginate through regular endpoint with period filter going back to 2015
-        for (let year = new Date().getFullYear(); year >= 2015; year--) {
-          let page = 1
-          while (true) {
-            const url = `${MONEYBIRD_API}/${adminId}/sales_invoices.json?per_page=100&page=${page}&filter=period:${year}0101..${year}1231`
-            const res = await fetch(url, {
-              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            })
-            if (!res.ok) break
-            const data = await res.json()
-            if (!Array.isArray(data) || data.length === 0) break
-            allInvoices.push(...data)
-            page++
-            if (page > 10) break
-          }
-        }
+      // For all: use cache
+      const now = Date.now()
+      if (cachedFacturen && (now - cacheTimestamp) < CACHE_TTL) {
+        return NextResponse.json(cachedFacturen, {
+          headers: { 'X-Cache': 'HIT', 'Cache-Control': 'private, max-age=300' }
+        })
       }
+
+      // Fetch all invoices using period filter per year (fastest method)
+      allInvoices = []
+      const currentYear = new Date().getFullYear()
+      const fetchPromises = []
+
+      for (let year = currentYear; year >= 2020; year--) {
+        fetchPromises.push(
+          fetchPaginated(
+            `${MONEYBIRD_API}/${adminId}/sales_invoices.json?filter=period:${year}0101..${year}1231`,
+            token
+          )
+        )
+      }
+
+      // Fetch all years in parallel
+      const results = await Promise.all(fetchPromises)
+      results.forEach(r => allInvoices.push(...r))
+
+      // Deduplicate
+      const seen = new Set<string>()
+      allInvoices = allInvoices.filter(inv => {
+        const id = String(inv.id)
+        if (seen.has(id)) return false
+        seen.add(id)
+        return true
+      })
     }
 
-    // Deduplicate by id
-    const seen = new Set<string>()
-    const unique = allInvoices.filter(inv => {
-      const id = String(inv.id)
-      if (seen.has(id)) return false
-      seen.add(id)
-      return true
-    })
-
-    function mapStatus(state: string, dueDate: string | null): string {
-      if (state === 'paid') return 'paid'
-      if (state === 'uncollectible') return 'paid'
-      if (state === 'late' || state === 'reminded') return 'late'
-      if (dueDate && new Date(dueDate) < new Date() && state !== 'paid' && state !== 'draft') return 'late'
-      if (state === 'draft') return 'draft'
-      return 'open'
-    }
-
-    const facturen = unique.map((inv) => ({
-      id: inv.id,
-      invoice_id: inv.invoice_id,
-      factuurnummer: inv.invoice_id || inv.reference,
-      datum: inv.invoice_date,
-      bedrag: parseFloat(inv.total_price_excl_tax as string) || 0,
-      btw: parseFloat(inv.total_tax as string) || 0,
-      totaal: parseFloat(inv.total_price_incl_tax as string) || 0,
-      vervaldatum: inv.due_date,
-      status: mapStatus(inv.state as string, inv.due_date as string | null),
-      moneybird_status: inv.state,
-      betaald_op: inv.paid_at || null,
-      contact_id: inv.contact_id,
-      contact_naam: typeof inv.contact === 'object' && inv.contact !== null
-        ? ((inv.contact as Record<string, unknown>).company_name ||
-           [(inv.contact as Record<string, unknown>).firstname, (inv.contact as Record<string, unknown>).lastname].filter(Boolean).join(' '))
-        : null,
-    }))
-
+    const facturen = allInvoices.map(inv => mapInvoice(inv))
     facturen.sort((a, b) => String(b.datum || '').localeCompare(String(a.datum || '')))
 
-    return NextResponse.json(facturen)
+    // Cache the result (only for all-invoices, not per-contact)
+    if (!contactId) {
+      cachedFacturen = facturen
+      cacheTimestamp = Date.now()
+    }
+
+    return NextResponse.json(facturen, {
+      headers: { 'X-Cache': 'MISS', 'Cache-Control': 'private, max-age=300' }
+    })
   } catch {
     return NextResponse.json({ error: 'Fout bij ophalen facturen' }, { status: 500 })
+  }
+}
+
+async function fetchPaginated(baseUrl: string, token: string): Promise<Record<string, unknown>[]> {
+  const all: Record<string, unknown>[] = []
+  let page = 1
+  while (true) {
+    const separator = baseUrl.includes('?') ? '&' : '?'
+    const res = await fetch(`${baseUrl}${separator}per_page=100&page=${page}`, {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    })
+    if (!res.ok) break
+    const data = await res.json()
+    if (!Array.isArray(data) || data.length === 0) break
+    all.push(...data)
+    page++
+    if (page > 10) break
+  }
+  return all
+}
+
+function mapInvoice(inv: Record<string, unknown>) {
+  const state = inv.state as string
+  const dueDate = inv.due_date as string | null
+
+  let status = 'open'
+  if (state === 'paid' || state === 'uncollectible') status = 'paid'
+  else if (state === 'late' || state === 'reminded') status = 'late'
+  else if (dueDate && new Date(dueDate) < new Date() && state !== 'draft') status = 'late'
+  else if (state === 'draft') status = 'draft'
+
+  return {
+    id: inv.id,
+    invoice_id: inv.invoice_id,
+    factuurnummer: inv.invoice_id || inv.reference,
+    datum: inv.invoice_date,
+    bedrag: parseFloat(inv.total_price_excl_tax as string) || 0,
+    btw: parseFloat(inv.total_tax as string) || 0,
+    totaal: parseFloat(inv.total_price_incl_tax as string) || 0,
+    vervaldatum: inv.due_date,
+    status,
+    moneybird_status: inv.state,
+    betaald_op: inv.paid_at || null,
+    contact_id: inv.contact_id,
+    contact_naam: typeof inv.contact === 'object' && inv.contact !== null
+      ? ((inv.contact as Record<string, unknown>).company_name ||
+         [(inv.contact as Record<string, unknown>).firstname, (inv.contact as Record<string, unknown>).lastname].filter(Boolean).join(' '))
+      : null,
   }
 }

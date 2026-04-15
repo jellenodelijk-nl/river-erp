@@ -136,9 +136,24 @@ export default function TakenPage() {
 
   function getGerelateerdeLink(taak: Taak) {
     if (taak.gerelateerd_type === 'geen' || !taak.gerelateerd_id) return null
-    const base = taak.gerelateerd_type === 'campagne_lead' ? '/campagne-leads' :
-                 taak.gerelateerd_type === 'sales_lead' ? '/sales-leads' : '/klanten'
+    const routes: Record<string, string> = {
+      campagne_lead: '/campagne-leads',
+      sales_lead: '/sales-leads',
+      klant: '/klanten',
+      project: '/projecten',
+      ops_item: '/ops',
+    }
+    const base = routes[taak.gerelateerd_type] || '/klanten'
     return `${base}/${taak.gerelateerd_id}`
+  }
+
+  const typeLabels: Record<string, string> = {
+    campagne_lead: 'Campagne lead',
+    sales_lead: 'Sales lead',
+    klant: 'Klant',
+    project: 'Project',
+    ops_item: 'Ops',
+    geen: '-',
   }
 
   const toegewezenNaam = users.find(u => u.id === toegewezenAan)?.full_name
