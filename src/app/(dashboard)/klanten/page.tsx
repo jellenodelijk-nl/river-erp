@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Plus, Search, Loader2, Users } from 'lucide-react'
+import { Plus, Search, Loader2, Users, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import type { Klant, BedrijfTag, FacturatieMoment } from '@/lib/types'
@@ -28,6 +28,7 @@ export default function KlantenPage() {
   const [zoek, setZoek] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [importing, setImporting] = useState(false)
 
   // Form state
   const [naam, setNaam] = useState('')
@@ -84,10 +85,31 @@ export default function KlantenPage() {
     setSaving(false)
   }
 
+  async function handleImportMoneybird() {
+    setImporting(true)
+    try {
+      const res = await fetch('/api/moneybird/import', { method: 'POST' })
+      const result = await res.json()
+      if (result.success) {
+        toast.success(`${result.imported} klanten geïmporteerd uit Moneybird (${result.al_bestaand} bestonden al, ${result.skipped} overgeslagen)`)
+        fetchKlanten()
+      } else {
+        toast.error(result.error || 'Import mislukt')
+      }
+    } catch {
+      toast.error('Import mislukt')
+    }
+    setImporting(false)
+  }
+
   return (
     <>
       <PageHeader title="Klanten" description="Overzicht van alle klanten">
         <BedrijfFilter value={bedrijfFilter} onChange={setBedrijfFilter} />
+        <Button onClick={handleImportMoneybird} variant="outline" size="sm" disabled={importing} className="text-sm">
+          {importing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
+          Import Moneybird
+        </Button>
         <Button onClick={() => setCreateOpen(true)} className="bg-gradient-to-r from-[#3A6FD8] to-[#2F57AA] hover:from-[#2F57AA] hover:to-[#254A99] shadow-md shadow-[#3A6FD8]/15 text-sm" size="sm">
           <Plus className="w-4 h-4 mr-1" /> Nieuwe klant
         </Button>

@@ -17,10 +17,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { ArrowLeft, Plus, Loader2, FileText, ExternalLink } from 'lucide-react'
+import {
+  ArrowLeft, Plus, Loader2, FileText, Building2, Mail, Phone,
+  Globe, MapPin, Hash, CreditCard, Briefcase,
+} from 'lucide-react'
 import { formatDatum, formatValuta } from '@/lib/format'
 import { toast } from 'sonner'
+import { motion } from 'framer-motion'
 import type { Klant, Opdracht, MoneybirdFactuur, OpdrachtType, OpdrachtStatus } from '@/lib/types'
+
+function InfoItem({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string | null | undefined }) {
+  if (!value) return null
+  return (
+    <div className="flex items-start gap-3 py-2">
+      <div className="w-8 h-8 rounded-lg bg-[#F0F4FF] flex items-center justify-center shrink-0 mt-0.5">
+        <Icon className="w-4 h-4 text-[#3A6FD8]" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium text-[#9CA3AF] uppercase tracking-wider">{label}</p>
+        <p className="text-sm text-[#0B0D0E] mt-0.5">{value}</p>
+      </div>
+    </div>
+  )
+}
 
 export default function KlantDetailPage() {
   const params = useParams()
@@ -36,12 +55,10 @@ export default function KlantDetailPage() {
   const [opdrachtOpen, setOpdrachtOpen] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  // Opdracht form
   const [opTitel, setOpTitel] = useState('')
   const [opOmschrijving, setOpOmschrijving] = useState('')
   const [opType, setOpType] = useState<OpdrachtType>('eenmalig')
   const [opBedrag, setOpBedrag] = useState('')
-  const [opStatus, setOpStatus] = useState<OpdrachtStatus>('actief')
 
   useEffect(() => {
     async function fetchData() {
@@ -52,7 +69,6 @@ export default function KlantDetailPage() {
       setOpdrachten(o || [])
       setLoading(false)
 
-      // Fetch Moneybird facturen
       if (k?.moneybird_id) {
         setFacturenLoading(true)
         try {
@@ -74,7 +90,7 @@ export default function KlantDetailPage() {
       omschrijving: opOmschrijving || null,
       type: opType,
       bedrag: opBedrag ? parseFloat(opBedrag) : null,
-      status: opStatus,
+      status: 'actief' as OpdrachtStatus,
     })
     if (error) toast.error('Fout bij opslaan')
     else {
@@ -87,147 +103,201 @@ export default function KlantDetailPage() {
     setSaving(false)
   }
 
-  if (loading) return <div className="space-y-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-96 w-full" /></div>
+  if (loading) return <div className="space-y-4"><Skeleton className="h-48 w-full rounded-xl" /><Skeleton className="h-96 w-full rounded-xl" /></div>
   if (!klant) return <p className="text-[#6B7280]">Klant niet gevonden</p>
+
+  const adres = [klant.straat, klant.huisnummer].filter(Boolean).join(' ')
+  const adresVolledig = [adres, [klant.postcode, klant.plaats].filter(Boolean).join(' ')].filter(Boolean).join(', ')
+  const totaalOpdrachten = opdrachten.filter(o => o.status === 'actief').reduce((a, b) => a + (b.bedrag || 0), 0)
 
   return (
     <>
-      <PageHeader title={klant.naam}>
-        <BedrijfBadge tag={klant.bedrijf_tag} />
-        <Badge variant="outline" className="font-mono">{klant.klantnummer}</Badge>
-        <Badge variant="secondary">
-          {klant.facturatie_moment === 'tweede_dinsdag' ? 'Tweede dinsdag' : 'Achteraf'}
-        </Badge>
-      </PageHeader>
-
-      <Button variant="ghost" size="sm" onClick={() => router.push('/klanten')} className="mb-6">
-        <ArrowLeft className="w-4 h-4 mr-1" /> Terug
-      </Button>
+      {/* Hero header */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative mb-6 rounded-2xl overflow-hidden bg-gradient-to-r from-[#3A6FD8] to-[#1F8A9B] p-6 md:p-8"
+      >
+        <div className="absolute inset-0 opacity-10">
+          <svg viewBox="0 0 800 200" fill="none" className="w-full h-full" preserveAspectRatio="none">
+            <path d="M-50 100C150 50 350 150 550 100C750 50 800 120 850 100" stroke="white" strokeWidth="60" />
+            <path d="M-50 150C150 100 350 200 550 150C750 100 800 170 850 150" stroke="white" strokeWidth="40" />
+          </svg>
+        </div>
+        <div className="relative">
+          <Button variant="ghost" size="sm" onClick={() => router.push('/klanten')} className="text-white/80 hover:text-white hover:bg-white/10 -ml-2 mb-3">
+            <ArrowLeft className="w-4 h-4 mr-1" /> Terug naar klanten
+          </Button>
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-semibold text-white">{klant.naam}</h1>
+                  {klant.bedrijf && <p className="text-white/70 text-sm">{klant.bedrijf}</p>}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
+                <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm font-mono">{klant.klantnummer}</Badge>
+                <BedrijfBadge tag={klant.bedrijf_tag} />
+                <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm">
+                  {klant.facturatie_moment === 'tweede_dinsdag' ? 'Tweede dinsdag' : 'Achteraf'}
+                </Badge>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              {totaalOpdrachten > 0 && (
+                <div className="text-right">
+                  <p className="text-white/60 text-xs">Actieve opdrachten</p>
+                  <p className="text-white text-xl font-semibold">{formatValuta(totaalOpdrachten)}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Contactgegevens */}
-          <Card className="border border-[#E5E7EB] shadow-sm">
-            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold">Contactgegevens</CardTitle></CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-[#6B7280] text-xs">Bedrijf</span><p>{klant.bedrijf}</p></div>
-                <div><span className="text-[#6B7280] text-xs">E-mail</span><p>{klant.email || '-'}</p></div>
-                <div><span className="text-[#6B7280] text-xs">Telefoon</span><p>{klant.telefoonnummer || '-'}</p></div>
-                <div><span className="text-[#6B7280] text-xs">Website</span><p>{klant.url || '-'}</p></div>
-                <div className="col-span-2"><span className="text-[#6B7280] text-xs">Adres</span>
-                  <p>{[klant.straat, klant.huisnummer].filter(Boolean).join(' ') || '-'}<br/>{[klant.postcode, klant.plaats].filter(Boolean).join(' ')}</p>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+            <Card className="border border-[#E5E7EB]/80 shadow-sm rounded-xl overflow-hidden">
+              <CardHeader className="pb-2 bg-gradient-to-r from-[#FAFBFC] to-white border-b border-[#E5E7EB]/50">
+                <CardTitle className="text-sm font-semibold">Contactgegevens</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                  <InfoItem icon={Mail} label="E-mail" value={klant.email} />
+                  <InfoItem icon={Phone} label="Telefoon" value={klant.telefoonnummer} />
+                  <InfoItem icon={Globe} label="Website" value={klant.url} />
+                  <InfoItem icon={MapPin} label="Adres" value={adresVolledig || null} />
+                  <InfoItem icon={Hash} label="Moneybird ID" value={klant.moneybird_id} />
+                  <InfoItem icon={CreditCard} label="KvK / Rechtsvorm" value={klant.rechtsvorm} />
                 </div>
-                {klant.moneybird_id && <div><span className="text-[#6B7280] text-xs">Moneybird ID</span><p className="font-mono text-xs">{klant.moneybird_id}</p></div>}
-              </div>
-            </CardContent>
-          </Card>
+                {!klant.email && !klant.telefoonnummer && !adresVolledig && (
+                  <p className="text-xs text-[#9CA3AF] py-4 text-center">Geen contactgegevens beschikbaar</p>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
 
           {/* Opdrachten */}
-          <Card className="border border-[#E5E7EB] shadow-sm">
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-semibold">Opdrachten &amp; Upsells</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => setOpdrachtOpen(true)} className="text-xs">
-                <Plus className="w-3 h-3 mr-1" /> Nieuwe opdracht
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {opdrachten.length === 0 ? (
-                <p className="text-xs text-[#6B7280]">Geen opdrachten</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs">Titel</TableHead>
-                      <TableHead className="text-xs">Type</TableHead>
-                      <TableHead className="text-xs">Bedrag</TableHead>
-                      <TableHead className="text-xs">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <Card className="border border-[#E5E7EB]/80 shadow-sm rounded-xl overflow-hidden">
+              <CardHeader className="pb-2 bg-gradient-to-r from-[#FAFBFC] to-white border-b border-[#E5E7EB]/50 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-[#3A6FD8]" />
+                  Opdrachten &amp; Upsells
+                </CardTitle>
+                <Button variant="outline" size="sm" onClick={() => setOpdrachtOpen(true)} className="text-xs">
+                  <Plus className="w-3 h-3 mr-1" /> Nieuwe opdracht
+                </Button>
+              </CardHeader>
+              <CardContent className="pt-4">
+                {opdrachten.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Briefcase className="w-8 h-8 text-[#D1D5DB] mx-auto mb-2" />
+                    <p className="text-xs text-[#9CA3AF]">Nog geen opdrachten</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
                     {opdrachten.map(op => (
-                      <TableRow key={op.id}>
-                        <TableCell className="text-sm font-medium">{op.titel}</TableCell>
-                        <TableCell><Badge variant="outline" className="text-xs capitalize">{op.type}</Badge></TableCell>
-                        <TableCell className="text-sm">{op.bedrag ? formatValuta(op.bedrag) : '-'}</TableCell>
-                        <TableCell>
-                          <Badge className={`text-xs ${
+                      <div key={op.id} className="flex items-center justify-between p-3 rounded-lg bg-[#F4F6F7]/50 hover:bg-[#F0F4FF]/30 transition-colors">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-[#0B0D0E]">{op.titel}</p>
+                          {op.omschrijving && <p className="text-xs text-[#6B7280] mt-0.5 truncate">{op.omschrijving}</p>}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-3">
+                          <Badge variant="outline" className="text-xs capitalize">{op.type}</Badge>
+                          {op.bedrag && <span className="text-sm font-semibold text-[#0B0D0E]">{formatValuta(op.bedrag)}</span>}
+                          <Badge className={`text-[10px] ${
                             op.status === 'actief' ? 'bg-green-100 text-green-800' :
                             op.status === 'afgerond' ? 'bg-gray-100 text-gray-800' :
                             'bg-red-100 text-red-800'
                           }`}>{op.status}</Badge>
-                        </TableCell>
-                      </TableRow>
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
 
           {/* Moneybird Facturen */}
-          <Card className="border border-[#E5E7EB] shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <FileText className="w-4 h-4" /> Moneybird Facturen
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!klant.moneybird_id ? (
-                <p className="text-xs text-[#6B7280]">Geen Moneybird ID gekoppeld. Voeg een Moneybird ID toe aan deze klant om facturen te zien.</p>
-              ) : facturenLoading ? (
-                <div className="space-y-2">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}</div>
-              ) : facturen.length === 0 ? (
-                <p className="text-xs text-[#6B7280]">Geen facturen gevonden</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs">Factuurnr</TableHead>
-                      <TableHead className="text-xs">Datum</TableHead>
-                      <TableHead className="text-xs">Bedrag</TableHead>
-                      <TableHead className="text-xs">Vervaldatum</TableHead>
-                      <TableHead className="text-xs">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+            <Card className="border border-[#E5E7EB]/80 shadow-sm rounded-xl overflow-hidden">
+              <CardHeader className="pb-2 bg-gradient-to-r from-[#FAFBFC] to-white border-b border-[#E5E7EB]/50">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[#1F8A9B]" />
+                  Moneybird Facturen
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                {!klant.moneybird_id ? (
+                  <div className="text-center py-8">
+                    <FileText className="w-8 h-8 text-[#D1D5DB] mx-auto mb-2" />
+                    <p className="text-xs text-[#9CA3AF]">Geen Moneybird ID gekoppeld</p>
+                    <p className="text-[11px] text-[#D1D5DB] mt-1">Voeg een Moneybird ID toe om facturen te zien</p>
+                  </div>
+                ) : facturenLoading ? (
+                  <div className="space-y-2">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}</div>
+                ) : facturen.length === 0 ? (
+                  <p className="text-xs text-[#9CA3AF] text-center py-6">Geen facturen gevonden</p>
+                ) : (
+                  <div className="space-y-2">
                     {facturen.map(f => (
-                      <TableRow key={f.id}>
-                        <TableCell className="text-sm font-mono">{f.factuurnummer}</TableCell>
-                        <TableCell className="text-xs">{formatDatum(f.datum)}</TableCell>
-                        <TableCell className="text-sm">{formatValuta(f.totaal)}</TableCell>
-                        <TableCell className="text-xs">{formatDatum(f.vervaldatum)}</TableCell>
-                        <TableCell>
-                          <Badge className={`text-xs ${
-                            f.status === 'paid' ? 'bg-green-100 text-green-800' :
-                            f.status === 'late' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {f.status === 'paid' ? 'Betaald' : f.status === 'late' ? 'Te laat' : 'Open'}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
+                      <div key={f.id} className="flex items-center justify-between p-3 rounded-lg bg-[#F4F6F7]/50">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-2 h-2 rounded-full ${
+                            f.status === 'paid' ? 'bg-green-500' :
+                            f.status === 'late' ? 'bg-red-500' :
+                            'bg-yellow-500'
+                          }`} />
+                          <div>
+                            <p className="text-sm font-medium font-mono text-[#0B0D0E]">{f.factuurnummer}</p>
+                            <p className="text-[11px] text-[#9CA3AF]">{formatDatum(f.datum)}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-[#0B0D0E]">{formatValuta(f.totaal)}</p>
+                          <p className="text-[11px] text-[#9CA3AF]">Vervalt {formatDatum(f.vervaldatum)}</p>
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <Card className="border border-[#E5E7EB] shadow-sm">
-            <CardContent className="pt-5">
-              <ContactmomentenSectie type="klant" referentieId={id} />
-            </CardContent>
-          </Card>
-          <Card className="border border-[#E5E7EB] shadow-sm">
-            <CardContent className="pt-5">
-              <TakenSectie gerelateerType="klant" gerelateerdeId={id} />
-            </CardContent>
-          </Card>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <Card className="border border-[#E5E7EB]/80 shadow-sm rounded-xl overflow-hidden">
+              <CardHeader className="pb-2 bg-gradient-to-r from-[#FAFBFC] to-white border-b border-[#E5E7EB]/50">
+                <CardTitle className="text-sm font-semibold">Contactmomenten</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <ContactmomentenSectie type="klant" referentieId={id} />
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+            <Card className="border border-[#E5E7EB]/80 shadow-sm rounded-xl overflow-hidden">
+              <CardHeader className="pb-2 bg-gradient-to-r from-[#FAFBFC] to-white border-b border-[#E5E7EB]/50">
+                <CardTitle className="text-sm font-semibold">Taken</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <TakenSectie gerelateerType="klant" gerelateerdeId={id} />
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
       </div>
 
@@ -237,18 +307,18 @@ export default function KlantDetailPage() {
           <DialogHeader><DialogTitle>Nieuwe opdracht</DialogTitle></DialogHeader>
           <form onSubmit={handleOpdrachtSubmit} className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label className="text-xs">Titel *</Label>
+              <Label className="text-xs font-medium text-[#6B7280]">Titel *</Label>
               <Input value={opTitel} onChange={(e) => setOpTitel(e.target.value)} required className="h-9 text-sm" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Omschrijving</Label>
+              <Label className="text-xs font-medium text-[#6B7280]">Omschrijving</Label>
               <Textarea value={opOmschrijving} onChange={(e) => setOpOmschrijving(e.target.value)} className="text-sm" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Type</Label>
-                <Select value={opType} onValueChange={(v) => setOpType(v as OpdrachtType)}>
-                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                <Label className="text-xs font-medium text-[#6B7280]">Type</Label>
+                <Select value={opType} onValueChange={(v) => setOpType((v ?? 'eenmalig') as OpdrachtType)}>
+                  <SelectTrigger className="h-9 text-sm">{opType === 'eenmalig' ? 'Eenmalig' : 'Upsell'}</SelectTrigger>
                   <SelectContent>
                     <SelectItem value="eenmalig">Eenmalig</SelectItem>
                     <SelectItem value="upsell">Upsell</SelectItem>
@@ -256,13 +326,13 @@ export default function KlantDetailPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Bedrag (€)</Label>
+                <Label className="text-xs font-medium text-[#6B7280]">Bedrag (&euro;)</Label>
                 <Input type="number" step="0.01" value={opBedrag} onChange={(e) => setOpBedrag(e.target.value)} className="h-9 text-sm" />
               </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpdrachtOpen(false)}>Annuleren</Button>
-              <Button type="submit" className="bg-[#3A6FD8] hover:bg-[#2F57AA]" disabled={saving}>
+              <Button type="submit" className="bg-gradient-to-r from-[#3A6FD8] to-[#2F57AA] shadow-md shadow-[#3A6FD8]/15" disabled={saving}>
                 {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Toevoegen
               </Button>
             </DialogFooter>
