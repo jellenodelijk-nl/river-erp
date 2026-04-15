@@ -162,6 +162,8 @@ export function LeadForm({ type, initialData, leadId, onSuccess, inline }: LeadF
   }
 
   const eigenaarNaam = users.find(u => u.id === form.eigenaar_id)?.full_name
+  const faseLabel = fases.find(f => f.value === form.fase)?.label || form.fase
+  const tagLabel = form.bedrijf_tag === 'river_digital' ? 'River Digital' : 'River Software'
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -190,7 +192,7 @@ export function LeadForm({ type, initialData, leadId, onSuccess, inline }: LeadF
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-[#6B7280]">Fase</Label>
           <Select value={form.fase} onValueChange={(v) => updateField('fase', v ?? '')}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-9 text-sm">{faseLabel}</SelectTrigger>
             <SelectContent>
               {fases.map((f) => (
                 <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
@@ -214,7 +216,7 @@ export function LeadForm({ type, initialData, leadId, onSuccess, inline }: LeadF
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-[#6B7280]">Bedrijf tag</Label>
           <Select value={form.bedrijf_tag} onValueChange={(v) => updateField('bedrijf_tag', v ?? '')}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-9 text-sm">{tagLabel}</SelectTrigger>
             <SelectContent>
               <SelectItem value="river_digital">River Digital</SelectItem>
               <SelectItem value="river_software">River Software</SelectItem>

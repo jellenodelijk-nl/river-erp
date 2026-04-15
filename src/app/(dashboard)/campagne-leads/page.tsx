@@ -359,7 +359,7 @@ export default function CampagneLeadsPage() {
 
       {/* Nieuwe lead popup */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:!max-w-3xl !w-[90vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nieuwe campagne lead</DialogTitle>
           </DialogHeader>
