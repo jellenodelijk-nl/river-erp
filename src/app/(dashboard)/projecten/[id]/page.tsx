@@ -61,8 +61,11 @@ function TaakRij({ taak, subtaken, onToggle, onAddSub, onEdit, users }: {
           {taak.toegewezen_gebruiker && <span className="text-[11px] text-muted-foreground hidden md:block">{taak.toegewezen_gebruiker.full_name}</span>}
           {taak.deadline && <span className="text-[11px] text-muted-foreground">{formatDatum(taak.deadline)}</span>}
           {taak.prioriteit === 'hoog' && <Badge variant="outline" className="text-[10px] border-red-200 text-red-600">Hoog</Badge>}
-          <button onClick={() => onAddSub(taak.id)} className="text-muted-foreground/30 hover:text-primary transition-colors opacity-0 group-hover:opacity-100" title="Subtaak toevoegen">
-            <Plus className="w-3.5 h-3.5" />
+          <button onClick={(e) => { e.stopPropagation(); onAddSub(taak.id) }}
+            className="flex items-center gap-1 text-[10px] text-muted-foreground/50 hover:text-primary border border-transparent hover:border-primary/20 rounded px-1.5 py-0.5 transition-all opacity-0 group-hover:opacity-100"
+            title="Subtaak toevoegen">
+            <Plus className="w-3 h-3" />
+            <span className="hidden lg:inline">Subtaak</span>
           </button>
         </div>
       </div>
