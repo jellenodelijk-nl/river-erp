@@ -31,6 +31,23 @@ const statusColors: Record<ProjectStatus, string> = {
   geannuleerd: 'bg-red-100 text-red-800',
 }
 
+function ProjectProgress({ project }: { project: Project }) {
+  const t = (project as unknown as Record<string, unknown>)._taken as { total: number; done: number } | undefined
+  if (!t || t.total === 0) return null
+  const pct = Math.round((t.done / t.total) * 100)
+  return (
+    <div className="mb-3">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[11px] text-muted-foreground">{t.done}/{t.total} taken</span>
+        <span className="text-[11px] font-medium text-foreground">{pct}%</span>
+      </div>
+      <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+        <div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  )
+}
+
 export default function ProjectenPage() {
   const router = useRouter()
   const supabase = createClient()
@@ -58,12 +75,21 @@ export default function ProjectenPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const [projRes, usersRes, klantenRes] = await Promise.all([
-      supabase.from('projecten').select('*, klant:klanten(*), eigenaar:users(*)').order('created_at', { ascending: false }),
+    const [projRes, usersRes, klantenRes, takenRes] = await Promise.all([
+      supabase.from('projecten').select('*, klant:klanten(*), eigenaar:users(*)').is('parent_id', null).order('created_at', { ascending: false }),
       supabase.from('users').select('*'),
       supabase.from('klanten').select('id, naam, bedrijf'),
+      supabase.from('taken').select('gerelateerd_id, status').eq('gerelateerd_type', 'project'),
     ])
-    setProjecten(projRes.data || [])
+    // Enrich with taken count
+    const takenPerProject: Record<string, { total: number; done: number }> = {}
+    takenRes.data?.forEach(t => {
+      if (!t.gerelateerd_id) return
+      if (!takenPerProject[t.gerelateerd_id]) takenPerProject[t.gerelateerd_id] = { total: 0, done: 0 }
+      takenPerProject[t.gerelateerd_id].total++
+      if (t.status === 'afgerond') takenPerProject[t.gerelateerd_id].done++
+    })
+    setProjecten((projRes.data || []).map(p => ({ ...p, _taken: takenPerProject[p.id] || { total: 0, done: 0 } })))
     setUsers(usersRes.data || [])
     setKlanten(klantenRes.data || [])
     setLoading(false)
@@ -154,9 +180,14 @@ export default function ProjectenPage() {
                     </Badge>
                   </div>
                   {p.omschrijving && <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{p.omschrijving}</p>}
+                  {/* Progress bar */}
+                  <ProjectProgress project={p} />
                   <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                    {p.start_datum && (
-                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDatum(p.start_datum)}</span>
+                    {p.eind_datum && (
+                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />Deadline: {formatDatum(p.eind_datum)}</span>
+                    )}
+                    {!p.eind_datum && p.start_datum && (
+                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />Start: {formatDatum(p.start_datum)}</span>
                     )}
                     {p.eigenaar && <span>{p.eigenaar.full_name}</span>}
                   </div>

@@ -166,6 +166,7 @@ export interface Contactmoment {
 
 export interface Taak {
   id: string
+  parent_id: string | null
   titel: string
   omschrijving: string | null
   toegewezen_aan: string | null
