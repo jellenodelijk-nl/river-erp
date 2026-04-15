@@ -67,12 +67,34 @@ export default function TakenPage() {
     if (eigenaarFilter !== 'alle') query = query.eq('toegewezen_aan', eigenaarFilter)
 
     const { data } = await query
-    let filtered = data || []
+    let items = data || []
+
+    // Enrich with related entity names
+    const relIds: Record<string, Set<string>> = { klant: new Set(), campagne_lead: new Set(), sales_lead: new Set(), project: new Set(), ops_item: new Set() }
+    items.forEach(t => { if (t.gerelateerd_id && t.gerelateerd_type !== 'geen' && relIds[t.gerelateerd_type]) relIds[t.gerelateerd_type].add(t.gerelateerd_id) })
+
+    const nameMap: Record<string, string> = {}
+    const lookups = [
+      { type: 'klant', table: 'klanten', field: 'naam' },
+      { type: 'campagne_lead', table: 'campagne_leads', field: 'naam' },
+      { type: 'sales_lead', table: 'sales_leads', field: 'naam' },
+      { type: 'project', table: 'projecten', field: 'titel' },
+      { type: 'ops_item', table: 'ops_items', field: 'titel' },
+    ]
+    await Promise.all(lookups.map(async ({ type, table, field }) => {
+      const ids = Array.from(relIds[type] || [])
+      if (ids.length === 0) return
+      const { data: rows } = await supabase.from(table).select('*').in('id', ids)
+      rows?.forEach((r: Record<string, unknown>) => { nameMap[r.id as string] = (r[field] as string) || '' })
+    }))
+
+    items = items.map(t => ({ ...t, gerelateerd_naam: t.gerelateerd_id ? nameMap[t.gerelateerd_id] || null : null }))
+
     if (zoek) {
       const s = zoek.toLowerCase()
-      filtered = filtered.filter(t => t.titel.toLowerCase().includes(s))
+      items = items.filter(t => t.titel.toLowerCase().includes(s))
     }
-    setTaken(filtered)
+    setTaken(items)
     setLoading(false)
   }, [supabase, statusFilter, prioriteitFilter, eigenaarFilter, zoek])
 
@@ -233,11 +255,12 @@ export default function TakenPage() {
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {getGerelateerdeLink(taak) ? (
-                        <Link href={getGerelateerdeLink(taak)!} className="text-xs text-[#3A6FD8] hover:underline flex items-center gap-1">
-                          <Link2 className="w-3 h-3" />
-                          {taak.gerelateerd_type === 'klant' ? 'Klant' : taak.gerelateerd_type === 'sales_lead' ? 'Sales lead' : 'Campagne lead'}
+                        <Link href={getGerelateerdeLink(taak)!} className="text-xs text-primary hover:underline flex items-center gap-1.5 max-w-[200px]">
+                          <Link2 className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{taak.gerelateerd_naam || typeLabels[taak.gerelateerd_type]}</span>
+                          <Badge variant="outline" className="text-[9px] shrink-0 px-1">{typeLabels[taak.gerelateerd_type]}</Badge>
                         </Link>
-                      ) : <span className="text-xs text-[#D1D5DB]">-</span>}
+                      ) : <span className="text-xs text-muted-foreground/30">-</span>}
                     </TableCell>
                     <TableCell className="text-xs text-[#6B7280] hidden md:table-cell">
                       {taak.toegewezen_gebruiker?.full_name || '-'}
