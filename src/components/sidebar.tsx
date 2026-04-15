@@ -89,13 +89,13 @@ export function Sidebar() {
 
       {/* Logo */}
       <div className="px-5 py-5 border-b border-[#E5E7EB]/60 relative">
-        <Link href="/" className="flex items-center gap-2.5" onClick={() => setMobileOpen(false)}>
-          <Image src="/logos/river-digital.png" alt="River Digital" width={130} height={44} className="h-9 w-auto" priority />
+        <Link href="/" className="flex items-center gap-3" onClick={() => setMobileOpen(false)}>
+          <Image src="/logos/river-icon.png" alt="River" width={36} height={36} className="w-9 h-9 rounded-lg" priority />
+          <div>
+            <span className="text-lg font-semibold text-[#0B0D0E] tracking-tight">River</span>
+            <p className="text-[10px] font-medium text-[#9CA3AF] tracking-wider uppercase -mt-0.5">ERP Systeem</p>
+          </div>
         </Link>
-        <div className="flex items-center gap-1.5 mt-1.5 pl-0.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#3A6FD8] to-[#1F8A9B]" />
-          <p className="text-[10px] font-medium text-[#9CA3AF] tracking-wider uppercase">ERP Systeem</p>
-        </div>
       </div>
 
       {/* Navigation */}
@@ -163,8 +163,9 @@ export function Sidebar() {
     <>
       {/* Mobile hamburger */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-md border-b border-[#E5E7EB]/60 px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="flex items-center">
-          <Image src="/logos/river-digital.png" alt="River Digital" width={100} height={32} className="h-7 w-auto" priority />
+        <Link href="/" className="flex items-center gap-2">
+          <Image src="/logos/river-icon.png" alt="River" width={28} height={28} className="w-7 h-7 rounded-md" priority />
+          <span className="text-base font-semibold text-[#0B0D0E] tracking-tight">River</span>
         </Link>
         <Button
           variant="ghost"

@@ -152,10 +152,9 @@ export default function LoginPage() {
       >
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="flex justify-center gap-5 items-center mb-4">
-            <Image src="/logos/river-digital.png" alt="River Digital" width={140} height={46} className="h-10 w-auto" priority />
-            <div className="w-px h-8 bg-gradient-to-b from-transparent via-[#D1D5DB] to-transparent" />
-            <Image src="/logos/river-software.png" alt="River Software" width={140} height={46} className="h-10 w-auto" priority />
+          <div className="flex justify-center items-center gap-3 mb-3">
+            <Image src="/logos/river-icon.png" alt="River" width={48} height={48} className="w-12 h-12 rounded-xl" priority />
+            <span className="text-3xl font-semibold text-[#0B0D0E] tracking-tight">River</span>
           </div>
           <p className="text-sm text-[#9CA3AF] font-medium tracking-wide">Intern management systeem</p>
         </div>
