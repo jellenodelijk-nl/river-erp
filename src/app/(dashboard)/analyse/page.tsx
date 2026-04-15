@@ -393,14 +393,12 @@ export default function AnalysePage() {
                     <TableHeader>
                       <TableRow className="bg-muted/10">
                         <TableHead className="text-[11px] font-semibold"><SortHeader field="naam">Klant</SortHeader></TableHead>
-                        <TableHead className="text-[11px] font-semibold hidden md:table-cell">Locatie</TableHead>
                         <TableHead className="text-[11px] font-semibold"><SortHeader field="klant_sinds">Klant sinds</SortHeader></TableHead>
                         <TableHead className="text-[11px] font-semibold text-right"><SortHeader field="totale_omzet">Totale omzet</SortHeader></TableHead>
                         <TableHead className="text-[11px] font-semibold text-right"><SortHeader field="aantal_facturen">Facturen</SortHeader></TableHead>
                         {alleJaren.slice(0, 4).map(j => (
                           <TableHead key={j} className="text-[11px] font-semibold text-right hidden lg:table-cell">{j}</TableHead>
                         ))}
-                        <TableHead className="text-[11px] font-semibold">Tag</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -412,7 +410,6 @@ export default function AnalysePage() {
                               {k.bedrijf && k.bedrijf !== k.naam && <p className="text-[11px] text-muted-foreground">{k.bedrijf}</p>}
                             </div>
                           </TableCell>
-                          <TableCell className="text-xs text-muted-foreground hidden md:table-cell">{k.plaats || '-'}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">{k.klant_sinds ? formatDatum(k.klant_sinds) : '-'}</TableCell>
                           <TableCell className="text-sm font-semibold text-right">{k.totale_omzet > 0 ? formatValuta(k.totale_omzet) : '-'}</TableCell>
                           <TableCell className="text-xs text-muted-foreground text-right">{k.aantal_facturen || '-'}</TableCell>
@@ -421,11 +418,10 @@ export default function AnalysePage() {
                               {k.omzet_per_jaar[j] ? formatValuta(k.omzet_per_jaar[j]) : <span className="text-muted-foreground/30">-</span>}
                             </TableCell>
                           ))}
-                          <TableCell><Badge variant="outline" className="text-[10px]">{k.bedrijf_tag === 'river_digital' ? 'Digital' : 'Software'}</Badge></TableCell>
                         </TableRow>
                       ))}
                       {filteredKlanten.length === 0 && (
-                        <TableRow><TableCell colSpan={6 + alleJaren.slice(0, 4).length} className="text-center text-sm text-muted-foreground py-8">Geen klanten gevonden</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={4 + alleJaren.slice(0, 4).length} className="text-center text-sm text-muted-foreground py-8">Geen klanten gevonden</TableCell></TableRow>
                       )}
                     </TableBody>
                   </Table>
