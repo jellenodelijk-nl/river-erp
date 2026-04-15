@@ -31,19 +31,20 @@ const taakStatusIcons: Record<TaakStatus, React.ReactNode> = {
   afgerond: <CheckCircle className="w-4 h-4 text-green-600" />,
 }
 
-function TaakRij({ taak, subtaken, onToggle, onAddSub, users }: {
+function TaakRij({ taak, subtaken, onToggle, onAddSub, onEdit, users }: {
   taak: Taak
   subtaken: Taak[]
   onToggle: (id: string, status: TaakStatus) => void
   onAddSub: (parentId: string) => void
+  onEdit: (taak: Taak) => void
   users: User[]
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(subtaken.length > 0)
   const hasSubtaken = subtaken.length > 0
 
   return (
     <div className="border-b border-border/30 last:border-0">
-      <div className="flex items-center gap-2 p-3 hover:bg-accent/30 transition-colors">
+      <div className="flex items-center gap-2 p-3 hover:bg-accent/30 transition-colors group">
         <button className="shrink-0 w-5 flex justify-center" onClick={() => setOpen(!open)}>
           {hasSubtaken ? (
             open ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
@@ -52,30 +53,32 @@ function TaakRij({ taak, subtaken, onToggle, onAddSub, users }: {
         <button onClick={() => onToggle(taak.id, taak.status === 'afgerond' ? 'open' : 'afgerond')} className="shrink-0">
           {taakStatusIcons[taak.status]}
         </button>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 cursor-pointer" onClick={() => onEdit(taak)}>
           <p className={`text-sm font-medium ${taak.status === 'afgerond' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{taak.titel}</p>
+          {taak.omschrijving && <p className="text-[11px] text-muted-foreground truncate">{taak.omschrijving}</p>}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {taak.toegewezen_gebruiker && <span className="text-[11px] text-muted-foreground hidden md:block">{taak.toegewezen_gebruiker.full_name}</span>}
           {taak.deadline && <span className="text-[11px] text-muted-foreground">{formatDatum(taak.deadline)}</span>}
           {taak.prioriteit === 'hoog' && <Badge variant="outline" className="text-[10px] border-red-200 text-red-600">Hoog</Badge>}
-          <button onClick={() => onAddSub(taak.id)} className="text-muted-foreground/40 hover:text-primary transition-colors" title="Subtaak toevoegen">
+          <button onClick={() => onAddSub(taak.id)} className="text-muted-foreground/30 hover:text-primary transition-colors opacity-0 group-hover:opacity-100" title="Subtaak toevoegen">
             <Plus className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
       {/* Subtaken */}
-      <AnimatePresence>
-        {(open || !hasSubtaken) && subtaken.length > 0 && (
+      <AnimatePresence initial={false}>
+        {open && subtaken.length > 0 && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.15 }}>
             <div className="ml-9 border-l border-border/40">
               {subtaken.map(sub => (
-                <div key={sub.id} className="flex items-center gap-2 p-2 pl-3 hover:bg-accent/20 transition-colors">
-                  <button onClick={() => onToggle(sub.id, sub.status === 'afgerond' ? 'open' : 'afgerond')} className="shrink-0">
+                <div key={sub.id} className="flex items-center gap-2 p-2 pl-3 hover:bg-accent/20 transition-colors cursor-pointer" onClick={() => onEdit(sub)}>
+                  <button onClick={(e) => { e.stopPropagation(); onToggle(sub.id, sub.status === 'afgerond' ? 'open' : 'afgerond') }} className="shrink-0">
                     {taakStatusIcons[sub.status]}
                   </button>
                   <p className={`text-xs flex-1 ${sub.status === 'afgerond' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{sub.titel}</p>
+                  {sub.deadline && <span className="text-[10px] text-muted-foreground">{formatDatum(sub.deadline)}</span>}
                   {sub.toegewezen_gebruiker && <span className="text-[10px] text-muted-foreground hidden md:block">{sub.toegewezen_gebruiker.full_name}</span>}
                 </div>
               ))}
@@ -101,6 +104,8 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
   const [taakOpen, setTaakOpen] = useState(false)
+  const [taakEditOpen, setTaakEditOpen] = useState(false)
+  const [editTaak, setEditTaak] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [editForm, setEditForm] = useState<Record<string, string>>({})
   const [klantZoek, setKlantZoek] = useState('')
@@ -108,6 +113,8 @@ export default function ProjectDetailPage() {
   // Taak form
   const [taakTitel, setTaakTitel] = useState('')
   const [taakParentId, setTaakParentId] = useState<string | null>(null)
+  const [taakOmschrijving, setTaakOmschrijving] = useState('')
+  const [taakDeadline, setTaakDeadline] = useState('')
   const [taakPrioriteit, setTaakPrioriteit] = useState<TaakPrioriteit>('normaal')
   const [taakEigenaar, setTaakEigenaar] = useState('')
 
@@ -155,6 +162,8 @@ export default function ProjectDetailPage() {
     setSaving(true)
     const { error } = await supabase.from('taken').insert({
       titel: taakTitel,
+      omschrijving: taakOmschrijving || null,
+      deadline: taakDeadline || null,
       toegewezen_aan: taakEigenaar || null,
       gerelateerd_type: 'project',
       gerelateerd_id: id,
@@ -165,6 +174,39 @@ export default function ProjectDetailPage() {
     else {
       toast.success(taakParentId ? 'Subtaak toegevoegd' : 'Taak toegevoegd')
       setTaakOpen(false)
+      const { data } = await supabase.from('taken').select('*, toegewezen_gebruiker:users!taken_toegewezen_aan_fkey(*)').eq('gerelateerd_type', 'project').eq('gerelateerd_id', id).order('created_at', { ascending: true })
+      setTaken(data || [])
+    }
+    setSaving(false)
+  }
+
+  function openTaakEdit(taak: Taak) {
+    setEditTaak({
+      id: taak.id,
+      titel: taak.titel || '',
+      omschrijving: taak.omschrijving || '',
+      deadline: taak.deadline || '',
+      prioriteit: taak.prioriteit || 'normaal',
+      status: taak.status || 'open',
+      toegewezen_aan: taak.toegewezen_aan || '',
+    })
+    setTaakEditOpen(true)
+  }
+
+  async function handleTaakEditSave(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true)
+    const { error } = await supabase.from('taken').update({
+      titel: editTaak.titel,
+      omschrijving: editTaak.omschrijving || null,
+      deadline: editTaak.deadline || null,
+      prioriteit: editTaak.prioriteit,
+      status: editTaak.status,
+      toegewezen_aan: editTaak.toegewezen_aan || null,
+    }).eq('id', editTaak.id)
+    if (error) toast.error('Opslaan mislukt')
+    else {
+      toast.success('Taak bijgewerkt'); setTaakEditOpen(false)
       const { data } = await supabase.from('taken').select('*, toegewezen_gebruiker:users!taken_toegewezen_aan_fkey(*)').eq('gerelateerd_type', 'project').eq('gerelateerd_id', id).order('created_at', { ascending: true })
       setTaken(data || [])
     }
@@ -300,7 +342,7 @@ export default function ProjectDetailPage() {
             ) : (
               hoofdTaken.map(taak => (
                 <TaakRij key={taak.id} taak={taak} subtaken={subtakenMap[taak.id] || []}
-                  onToggle={handleToggle} onAddSub={openTaakForm} users={users} />
+                  onToggle={handleToggle} onAddSub={openTaakForm} onEdit={openTaakEdit} users={users} />
               ))
             )}
           </CardContent>
@@ -312,11 +354,32 @@ export default function ProjectDetailPage() {
         <DialogContent className="sm:!max-w-md">
           <DialogHeader><DialogTitle>{taakParentId ? 'Nieuwe subtaak' : 'Nieuwe taak'}</DialogTitle></DialogHeader>
           <form onSubmit={handleTaakCreate} className="space-y-4 py-2">
+            {/* Show parent taak if subtaak */}
+            {taakParentId && (() => {
+              const parent = taken.find(t => t.id === taakParentId)
+              return parent ? (
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-accent border border-primary/20">
+                  <ChevronRight className="w-4 h-4 text-primary shrink-0" />
+                  <div>
+                    <p className="text-[11px] text-muted-foreground">Subtaak van:</p>
+                    <p className="text-sm font-medium text-foreground">{parent.titel}</p>
+                  </div>
+                </div>
+              ) : null
+            })()}
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-muted-foreground">Titel *</Label>
               <Input value={taakTitel} onChange={e => setTaakTitel(e.target.value)} required className="h-9 text-sm" placeholder="Wat moet er gebeuren?" autoFocus />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Omschrijving</Label>
+              <Textarea value={taakOmschrijving} onChange={e => setTaakOmschrijving(e.target.value)} className="text-sm min-h-[50px]" placeholder="Extra details..." />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Deadline</Label>
+                <Input type="date" value={taakDeadline} onChange={e => setTaakDeadline(e.target.value)} className="h-9 text-sm" />
+              </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">Prioriteit</Label>
                 <Select value={taakPrioriteit} onValueChange={v => setTaakPrioriteit((v ?? 'normaal') as TaakPrioriteit)}>
@@ -381,6 +444,60 @@ export default function ProjectDetailPage() {
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Annuleren</Button>
               <Button type="submit" className="bg-gradient-to-r from-[#3A6FD8] to-[#2F57AA]" disabled={saving}>
+                {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Opslaan
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit taak dialog */}
+      <Dialog open={taakEditOpen} onOpenChange={setTaakEditOpen}>
+        <DialogContent className="sm:!max-w-md">
+          <DialogHeader><DialogTitle>Taak bewerken</DialogTitle></DialogHeader>
+          <form onSubmit={handleTaakEditSave} className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Titel *</Label>
+              <Input value={editTaak.titel || ''} onChange={e => setEditTaak(p => ({...p, titel: e.target.value}))} required className="h-9 text-sm" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Omschrijving</Label>
+              <Textarea value={editTaak.omschrijving || ''} onChange={e => setEditTaak(p => ({...p, omschrijving: e.target.value}))} className="text-sm min-h-[50px]" />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Deadline</Label>
+                <Input type="date" value={editTaak.deadline || ''} onChange={e => setEditTaak(p => ({...p, deadline: e.target.value}))} className="h-9 text-sm" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Prioriteit</Label>
+                <Select value={editTaak.prioriteit} onValueChange={v => setEditTaak(p => ({...p, prioriteit: v ?? 'normaal'}))}>
+                  <SelectTrigger className="h-9 text-sm">{PRIORITEITEN.find(pr => pr.value === editTaak.prioriteit)?.label}</SelectTrigger>
+                  <SelectContent>{PRIORITEITEN.map(pr => <SelectItem key={pr.value} value={pr.value}>{pr.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Status</Label>
+                <Select value={editTaak.status} onValueChange={v => setEditTaak(p => ({...p, status: v ?? 'open'}))}>
+                  <SelectTrigger className="h-9 text-sm">{editTaak.status === 'open' ? 'Open' : editTaak.status === 'in_progress' ? 'In progress' : 'Afgerond'}</SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="in_progress">In progress</SelectItem>
+                    <SelectItem value="afgerond">Afgerond</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Toegewezen aan</Label>
+              <Select value={editTaak.toegewezen_aan} onValueChange={v => setEditTaak(p => ({...p, toegewezen_aan: v ?? ''}))}>
+                <SelectTrigger className="h-9 text-sm">{users.find(u => u.id === editTaak.toegewezen_aan)?.full_name || 'Selecteer...'}</SelectTrigger>
+                <SelectContent>{users.map(u => <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setTaakEditOpen(false)}>Annuleren</Button>
+              <Button type="submit" className="bg-gradient-to-r from-[#3A6FD8] to-[#2F57AA] shadow-md shadow-[#3A6FD8]/15" disabled={saving}>
                 {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Opslaan
               </Button>
             </DialogFooter>
