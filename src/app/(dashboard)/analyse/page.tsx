@@ -366,6 +366,26 @@ export default function AnalysePage() {
               <p className="text-[10px] text-muted-foreground/50 mt-1 text-center">Klik op een balk om klanten te zien</p>
             </ChartCard>
 
+            {/* Klanten per locatie — klikbaar */}
+            <ChartCard title="Klanten per locatie (top 10)" icon={Users} delay={0.2}>
+              {klantenPerLocatie.chart.length === 0 ? <p className="text-xs text-muted-foreground py-10 text-center">Geen data</p> : (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={klantenPerLocatie.chart} layout="vertical" onClick={(e) => {
+                    if (e?.activeLabel) {
+                      const items = klantenPerLocatie.detail[e.activeLabel] || []
+                      showDetail(`Klanten in ${e.activeLabel}`, items.map(k => ({ id: k.id, naam: k.naam, extra: k.bedrijf })))
+                    }
+                  }} style={{ cursor: 'pointer' }}>
+                    <XAxis type="number" />
+                    <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#1F8A9B" radius={[0, 4, 4, 0]} name="Klanten" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+              <p className="text-[10px] text-muted-foreground/50 mt-1 text-center">Klik op een balk om klanten te zien</p>
+            </ChartCard>
+
             {/* Campagne & Sales */}
             <ChartCard title="Campagne leads per fase" icon={Megaphone} delay={0.25}>
               {campagneFaseData.length === 0 ? <p className="text-xs text-muted-foreground py-10 text-center">Geen data</p> : (
