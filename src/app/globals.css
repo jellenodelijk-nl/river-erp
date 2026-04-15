@@ -58,7 +58,7 @@
 }
 
 :root {
-  --background: #F4F6F7;
+  --background: #F7F8FA;
   --foreground: #0B0D0E;
   --card: #FFFFFF;
   --card-foreground: #0B0D0E;
@@ -66,29 +66,29 @@
   --popover-foreground: #0B0D0E;
   --primary: #3A6FD8;
   --primary-foreground: #FFFFFF;
-  --secondary: #F4F6F7;
+  --secondary: #F0F2F5;
   --secondary-foreground: #1A1D1F;
-  --muted: #F4F6F7;
+  --muted: #F0F2F5;
   --muted-foreground: #6B7280;
-  --accent: #F4F6F7;
+  --accent: #F0F4FF;
   --accent-foreground: #1A1D1F;
   --destructive: #EF4444;
-  --border: #E5E7EB;
-  --input: #E5E7EB;
+  --border: #E8EAED;
+  --input: #E8EAED;
   --ring: #3A6FD8;
   --chart-1: #3A6FD8;
   --chart-2: #1F8A9B;
   --chart-3: #7FA6FF;
   --chart-4: #5FBBC7;
   --chart-5: #C9D9FF;
-  --radius: 0.5rem;
+  --radius: 0.625rem;
   --sidebar: #FFFFFF;
   --sidebar-foreground: #1A1D1F;
   --sidebar-primary: #3A6FD8;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F4F6F7;
+  --sidebar-accent: #F0F4FF;
   --sidebar-accent-foreground: #1A1D1F;
-  --sidebar-border: #E5E7EB;
+  --sidebar-border: #E8EAED;
   --sidebar-ring: #3A6FD8;
 }
 
@@ -99,8 +99,46 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* Utility classes inspired by imby.app */
+@layer utilities {
+  .card-base {
+    @apply bg-card border border-border rounded-xl shadow-sm;
+  }
+  .card-elevated {
+    @apply bg-card border border-border rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200;
+  }
+  .card-interactive {
+    @apply bg-card border border-border rounded-xl shadow-sm hover:border-primary/30 hover:shadow-md cursor-pointer transition-all duration-200;
+  }
+  .card-selected {
+    @apply border-primary/40 bg-primary/5 shadow-md;
+  }
+  .empty-state {
+    @apply flex flex-col items-center justify-center py-12 text-center;
+  }
+  .empty-state-icon {
+    @apply w-12 h-12 text-muted-foreground/30 mb-3;
+  }
+  .section-header {
+    @apply text-sm font-semibold text-foreground;
+  }
+  .glass-header {
+    @apply bg-card/90 backdrop-blur-md supports-[backdrop-filter]:bg-card/80;
+  }
+
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in-up {
+    animation: fade-in-up 0.4s ease-out forwards;
   }
 }

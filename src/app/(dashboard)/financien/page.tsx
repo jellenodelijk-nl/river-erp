@@ -76,19 +76,20 @@ export default function FinancienPage() {
 
   function FactuurRij({ f }: { f: MoneybirdFactuur }) {
     return (
-      <div className="flex items-center justify-between p-3 rounded-lg bg-[#F4F6F7]/50 hover:bg-[#F0F4FF]/30 transition-colors">
+      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-accent/50 transition-all duration-150">
         <div className="flex items-center gap-3 min-w-0">
           <div className={`w-2 h-2 rounded-full shrink-0 ${f.status === 'paid' ? 'bg-green-500' : f.status === 'late' ? 'bg-red-500' : 'bg-yellow-500'}`} />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium font-mono text-[#0B0D0E]">{f.factuurnummer}</span>
-              <span className="text-xs text-[#9CA3AF]">{formatDatum(f.datum)}</span>
+              <span className="text-sm font-medium font-mono text-foreground">{f.factuurnummer}</span>
+              {f.contact_naam && <span className="text-xs text-muted-foreground truncate max-w-[200px]">{f.contact_naam}</span>}
             </div>
+            <span className="text-[11px] text-muted-foreground/60">{formatDatum(f.datum)}</span>
           </div>
         </div>
         <div className="flex items-center gap-4 shrink-0">
-          <span className="text-xs text-[#9CA3AF]">Vervalt {formatDatum(f.vervaldatum)}</span>
-          <span className="text-sm font-semibold text-[#0B0D0E] w-24 text-right">{formatValuta(f.totaal)}</span>
+          <span className="text-[11px] text-muted-foreground/60 hidden md:block">Vervalt {formatDatum(f.vervaldatum)}</span>
+          <span className="text-sm font-semibold text-foreground w-24 text-right">{formatValuta(f.totaal)}</span>
           <Badge className={`text-[10px] w-16 justify-center ${
             f.status === 'paid' ? 'bg-green-100 text-green-800' :
             f.status === 'late' ? 'bg-red-100 text-red-800' :

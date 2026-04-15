@@ -188,7 +188,10 @@ export interface MoneybirdFactuur {
   totaal: number
   vervaldatum: string
   status: string
+  moneybird_status?: string
   betaald_op: string | null
+  contact_id?: string
+  contact_naam?: string | null
 }
 
 // --- UI helpers ---
