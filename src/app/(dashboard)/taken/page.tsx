@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Plus, Search, CheckCircle, Circle, Clock, Loader2, Link2 } from 'lucide-react'
+import { Plus, Search, CheckCircle, Circle, Clock, Loader2, Link2, AlertTriangle, CalendarClock } from 'lucide-react'
 import { formatDatum } from '@/lib/format'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
@@ -188,6 +188,44 @@ export default function TakenPage() {
           <Plus className="w-4 h-4 mr-1" /> Nieuwe taak
         </Button>
       </PageHeader>
+
+      {/* Status kaarten */}
+      {!loading && (() => {
+        const openCount = taken.filter(t => t.status === 'open').length
+        const inProgressCount = taken.filter(t => t.status === 'in_progress').length
+        const today = new Date().toISOString().split('T')[0]
+        const vandaagCount = taken.filter(t => t.deadline === today && t.status !== 'afgerond').length
+        const teLaatCount = taken.filter(t => t.deadline && t.deadline < today && t.status !== 'afgerond').length
+        const afgerondCount = taken.filter(t => t.status === 'afgerond').length
+
+        const cards = [
+          { label: 'Open', value: openCount, icon: Circle, color: '#3A6FD8', bg: '#EEF2FF', active: statusFilter === 'open', onClick: () => setStatusFilter(statusFilter === 'open' ? 'alle' : 'open') },
+          { label: 'In progress', value: inProgressCount, icon: Clock, color: '#D97706', bg: '#FFFBEB', active: statusFilter === 'in_progress', onClick: () => setStatusFilter(statusFilter === 'in_progress' ? 'alle' : 'in_progress') },
+          { label: 'Te laat', value: teLaatCount, icon: AlertTriangle, color: '#EF4444', bg: '#FEF2F2', active: false, onClick: () => {} },
+          { label: 'Vandaag', value: vandaagCount, icon: CalendarClock, color: '#6B7280', bg: '#F9FAFB', active: false, onClick: () => {} },
+          { label: 'Afgerond', value: afgerondCount, icon: CheckCircle, color: '#059669', bg: '#ECFDF5', active: statusFilter === 'afgerond', onClick: () => setStatusFilter(statusFilter === 'afgerond' ? 'alle' : 'afgerond') },
+        ]
+
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+            {cards.map(c => (
+              <button key={c.label} onClick={c.onClick}
+                className={`card-base p-4 text-left transition-all hover:shadow-md ${c.active ? 'ring-2 ring-primary/30' : ''}`}
+                style={c.active ? { backgroundColor: c.bg } : {}}>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: c.bg }}>
+                    <c.icon className="w-4 h-4" style={{ color: c.color }} />
+                  </div>
+                  <div>
+                    <p className="text-xl font-semibold text-foreground leading-none">{c.value}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">{c.label}</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )
+      })()}
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="relative">
